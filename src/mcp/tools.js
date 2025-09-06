@@ -47,6 +47,25 @@ export const TOOLS = [
     }
   },
   {
+    name: "connect_from_config",
+    description: "Connect to a database using a named configuration from config file",
+    inputSchema: {
+      type: "object",
+      properties: {
+        configName: {
+          type: "string",
+          description: "Name of the connection configuration (defaults to 'default' if not provided)",
+          default: "default"
+        },
+        connectionName: {
+          type: "string",
+          description: "Custom name for this connection (optional, will use configName if not provided)"
+        }
+      },
+      additionalProperties: false
+    }
+  },
+  {
     name: "execute_query",
     description: "Execute a SQL query on a connected database",
     inputSchema: {
@@ -120,6 +139,15 @@ export const TOOLS = [
         }
       },
       required: ["connection"]
+    }
+  },
+  {
+    name: "show_configurations",
+    description: "Show all database configurations available in the config file that can be used with connect_from_config",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false
     }
   }
 ]

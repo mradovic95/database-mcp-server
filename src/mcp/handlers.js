@@ -1,5 +1,6 @@
 import { DatabaseManager } from '../database/manager.js'
 import { logger } from '../utils/logger.js'
+import { configManager } from '../utils/config.js'
 
 export class ToolHandlers {
   constructor() {
@@ -33,6 +34,59 @@ export class ToolHandlers {
             text: JSON.stringify({
               success: false,
               error: error.message
+            }, null, 2)
+          }
+        ],
+        isError: true
+      }
+    }
+  }
+
+  async handleConnectFromConfig(args) {
+    try {
+      const configName = args.configName || 'default'
+      const connectionName = args.connectionName || configName
+      
+      logger.info(`Connecting to database using config '${configName}' as connection '${connectionName}'`)
+      
+      const config = configManager.getConnectionConfig(configName)
+      if (!config) {
+        throw new Error(`Configuration '${configName}' not found in config file`)
+      }
+
+      configManager.validateConnectionConfig(config)
+      
+      const connectionConfig = {
+        ...config,
+        name: connectionName
+      }
+      
+      const result = await this.dbManager.connect(connectionConfig)
+      logger.info(`Successfully connected to database using config '${configName}': ${result.name}`)
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              connection: result,
+              configUsed: configName,
+              message: `Successfully connected to ${config.type} database as '${result.name}' using config '${configName}'`
+            }, null, 2)
+          }
+        ]
+      }
+    } catch (error) {
+      logger.error(`Failed to connect using config: ${error.message}`)
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message,
+              configName: args.configName || 'default'
             }, null, 2)
           }
         ],
@@ -216,10 +270,65 @@ export class ToolHandlers {
     }
   }
 
+  async handleShowConfigurations() {
+    try {
+      logger.info('Retrieving all available configurations')
+      const configNames = configManager.getAllConnections()
+      
+      const configurations = {}
+      for (const name of configNames) {
+        const config = configManager.getConnectionConfig(name)
+        if (config) {
+          configurations[name] = {
+            type: config.type,
+            host: config.host,
+            port: config.port,
+            database: config.database,
+            user: config.user,
+            ssl: config.ssl || false,
+            maxConnections: config.maxConnections
+          }
+        }
+      }
+      
+      logger.info(`Found ${configNames.length} available configurations`)
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              configurations,
+              count: configNames.length,
+              message: `Found ${configNames.length} database configuration${configNames.length === 1 ? '' : 's'} available for use with connect_from_config`
+            }, null, 2)
+          }
+        ]
+      }
+    } catch (error) {
+      logger.error(`Failed to retrieve configurations: ${error.message}`)
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message
+            }, null, 2)
+          }
+        ],
+        isError: true
+      }
+    }
+  }
+
   async handleTool(name, args) {
     switch (name) {
       case 'connect_database':
         return this.handleConnectDatabase(args)
+      case 'connect_from_config':
+        return this.handleConnectFromConfig(args)
       case 'execute_query':
         return this.handleExecuteQuery(args)
       case 'list_connections':
@@ -230,6 +339,8 @@ export class ToolHandlers {
         return this.handleCloseConnection(args)
       case 'connection_info':
         return this.handleConnectionInfo(args)
+      case 'show_configurations':
+        return this.handleShowConfigurations(args)
       default:
         return {
           content: [
