@@ -1,0 +1,41 @@
+{
+  "default": {
+    "type": "postgresql",
+    "host": "localhost",
+    "port": 5432,
+    "database": "myapp",
+    "user": "username",
+    "password": "password",
+    "ssl": false,
+    "maxConnections": 10
+  },
+  "production": {
+    "type": "postgresql",
+    "host": "prod-db.example.com",
+    "port": 5432,
+    "database": "production",
+    "user": "prod_user",
+    "password": "secure_password",
+    "ssl": true,
+    "maxConnections": 20
+  },
+  "analytics": {
+    "type": "mysql",
+    "host": "analytics-db.example.com",
+    "port": 3306,
+    "database": "analytics",
+    "user": "analytics_user",
+    "password": "analytics_password",
+    "ssl": true,
+    "maxConnections": 5
+  },
+  "local_mysql": {
+    "type": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "database": "testdb",
+    "user": "root",
+    "password": "password",
+    "ssl": false
+  }
+}

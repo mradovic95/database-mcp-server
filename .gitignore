@@ -1,0 +1,17 @@
+node_modules/
+*.log
+.env
+.env.local
+.env.test
+.DS_Store
+coverage/
+dist/
+.nyc_output/
+*.tgz
+*.tmp
+temp/
+*.pid
+package-lock.json
+yarn.lock
+.vscode/
+.idea/
