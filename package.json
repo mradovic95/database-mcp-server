@@ -1,6 +1,6 @@
 {
   "name": "@mihailoradovi/database-mcp-server",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Node.js MCP server for runtime database connections with support for multiple database types",
   "type": "module",
   "main": "./src/server.js",
@@ -22,7 +22,11 @@
   "license": "MIT",
   "scripts": {
     "start": "node ./bin/cli.js",
-    "test": "node --test test/**/*.test.js",
+    "test": "vitest",
+    "test:setup": "docker compose -f docker-compose.test.yml up -d --wait",
+    "test:teardown": "docker compose -f docker-compose.test.yml down",
+    "test:integration": "vitest run",
+    "test:full": "npm run test:teardown ; docker compose -f docker-compose.test.yml up -d && ./scripts/wait-for-databases.sh && npm run test:integration && npm run test:teardown",
     "lint": "eslint src/ bin/ test/",
     "dev": "node --watch ./bin/cli.js"
   },
@@ -33,7 +37,8 @@
     "winston": "^3.17.0"
   },
   "devDependencies": {
-    "eslint": "^9.0.0"
+    "eslint": "^9.0.0",
+    "vitest": "^2.0.0"
   },
   "repository": {
     "type": "git",

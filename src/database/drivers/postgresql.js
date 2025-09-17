@@ -57,4 +57,48 @@ export class PostgreSQLDriver extends BaseDriver {
       this.pool = null
     }
   }
+
+  async getSchema() {
+    if (!this.pool) {
+      throw new Error('Database not connected. Call connect() first.')
+    }
+
+    try {
+      const tablesResult = await this.pool.query(`
+        SELECT table_name, table_schema
+        FROM information_schema.tables
+        WHERE table_schema = 'public' OR table_schema LIKE 'pg_temp_%'
+        ORDER BY table_name
+      `)
+
+      const tables = []
+
+      for (const table of tablesResult.rows) {
+        const columnsResult = await this.pool.query(`
+          SELECT
+            column_name,
+            data_type,
+            is_nullable,
+            column_default
+          FROM information_schema.columns
+          WHERE table_name = $1 AND table_schema = $2
+          ORDER BY ordinal_position
+        `, [table.table_name, table.table_schema])
+
+        tables.push({
+          name: table.table_name,
+          columns: columnsResult.rows.map(col => ({
+            name: col.column_name,
+            type: col.data_type,
+            nullable: col.is_nullable === 'YES',
+            default: col.column_default
+          }))
+        })
+      }
+
+      return { tables }
+    } catch (error) {
+      throw new Error(`PostgreSQL schema error: ${error.message}`)
+    }
+  }
 }

@@ -2,9 +2,11 @@
 
 ## Architecture Overview
 
-This Database MCP Server is designed as a Model Context Protocol (MCP) server that enables AI assistants like Claude to connect to and query databases during conversations. The architecture follows modern Node.js best practices with extensible, maintainable code.
+This Database MCP Server is designed as a Model Context Protocol (MCP) server that enables AI assistants like Claude to
+connect to and query databases during conversations. The architecture follows clean layered architecture principles with
+extensible driver patterns, providing reliable database operations through connection pooling and schema introspection.
 
-### High-Level Architecture
+### Clean Layered Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -13,7 +15,12 @@ This Database MCP Server is designed as a Model Context Protocol (MCP) server th
 └─────────────────┘    └─────────────────┘    └─────────────────┘
                                                        │
                                               ┌────────┴────────┐
-                                              │ Connection      │
+                                              │   MCP Handler   │
+                                              │   Coordinator   │
+                                              └────────┬────────┘
+                                                       │
+                                              ┌────────┴────────┐
+                                              │ Database        │
                                               │ Manager         │
                                               └────────┬────────┘
                                                        │
@@ -31,108 +38,264 @@ This Database MCP Server is designed as a Model Context Protocol (MCP) server th
                               └───────────┘  └─────────────────┘ └───────────┘
 ```
 
-## Core Components
+## Clean Layered Architecture Components
 
-### 1. MCP Server (`src/server.js`)
-- **Purpose**: Main entry point that handles MCP protocol communication
-- **Responsibilities**: 
-  - Register and expose MCP tools
-  - Handle tool execution requests
-  - Manage server lifecycle and error handling
-  - Coordinate with tool handlers
+### Infrastructure Layer
 
-### 2. Tool Handlers (`src/mcp/handlers.js`)
-- **Purpose**: Business logic for each MCP tool
-- **Pattern**: Command pattern implementation
+#### 1. CLI Entry Point (`bin/cli.js`)
+
+- **Purpose**: Command-line interface and application bootstrap
 - **Responsibilities**:
-  - Execute database operations
-  - Format responses for MCP protocol
-  - Handle errors gracefully
-  - Log operations for debugging
+    - Parse command-line options and configuration files
+    - Setup graceful shutdown handlers
+    - Initialize and configure MCP server instance
+    - Handle process lifecycle and logging
+    - Load and display configuration status (connections are not established automatically)
 
-### 3. Database Manager (`src/database/manager.js`)
-- **Purpose**: Central coordinator for all database connections
-- **Pattern**: Singleton-like manager pattern
+#### 2. MCP Server (`src/server.js`)
+
+- **Purpose**: Core MCP protocol handler
 - **Responsibilities**:
-  - Maintain named connection registry
-  - Delegate operations to appropriate drivers
-  - Connection lifecycle management
-  - Resource cleanup
+    - Handle MCP JSON-RPC protocol communication
+    - Process MCP requests (initialize, tools/list, tools/call)
+    - Coordinate with tool handlers for business logic execution
+    - Manage stdin/stdout communication with MCP clients
+    - Handle error responses and notifications
 
-### 4. Driver System (`src/database/drivers/`)
-- **Purpose**: Database-specific implementations
+#### 3. Driver System (`src/database/drivers/`)
+
+- **Purpose**: Infrastructure layer - database-specific client implementations
 - **Pattern**: Strategy pattern with factory
-- **Components**:
-  - `base.js`: Abstract base class defining interface
-  - `postgresql.js`: PostgreSQL-specific implementation
-  - `mysql.js`: MySQL-specific implementation
-  - `index.js`: Driver factory and registry
+- **Responsibilities**:
+    - Database connection management (PostgreSQL, MySQL)
+    - Connection pooling configuration and lifecycle
+    - Query execution with parameter binding
+    - Schema introspection and metadata retrieval
+    - No business logic - pure infrastructure
 
-### 5. Utilities (`src/utils/`)
-- **Logger**: Structured logging with levels
-- **Config**: Environment and file-based configuration
+### Business Logic Layer
 
-## Design Patterns Used
+#### 4. Database Manager (`src/database/manager.js`)
 
-### 1. Strategy Pattern (Drivers)
+- **Purpose**: Central coordinator for all database connections
+- **Pattern**: Manager pattern with registry
+- **Responsibilities**:
+    - Maintain named connection registry
+    - Delegate operations to appropriate drivers
+    - Connection lifecycle management
+    - Resource cleanup and health monitoring
+    - Connection testing and validation
+
+### Coordination Layer
+
+#### 5. Tool Definitions (`src/mcp/tools.js`)
+
+- **Purpose**: Centralized tool schema definitions
+- **Pattern**: Declarative configuration pattern
+- **Responsibilities**:
+    - Define tool names, descriptions, and input schemas
+    - Specify required and optional parameters
+    - Provide parameter validation rules and defaults
+
+#### 6. Tool Handlers (`src/mcp/handlers.js`)
+
+- **Purpose**: MCP tool implementations that coordinate business logic
+- **Pattern**: Handler pattern with manager delegation
+- **Responsibilities**:
+    - Process MCP tool execution requests
+    - Coordinate with database manager for operations
+    - Format responses for MCP protocol
+    - Handle errors gracefully and consistently
+    - Provide structured logging for debugging
+
+### Utilities
+
+#### 7. Logger (`src/utils/logger.js`)
+
+- **Purpose**: Structured logging with configurable levels
+- **Responsibilities**:
+    - Consistent error formatting and context
+    - Query timing and performance metrics
+    - MCP mode detection for appropriate log formatting
+
+#### 8. Configuration (`src/utils/config.js`)
+
+- **Purpose**: Environment and file-based configuration management
+- **Responsibilities**:
+    - Load configuration from multiple sources
+    - Validate configuration parameters
+    - Provide default values and environment variable support
+
+## Clean Architecture Patterns
+
+### 1. Layered Architecture
+
+The system is organized into distinct layers with clear responsibilities:
+
+```
+┌─────────────────────────┐
+│    Coordination Layer   │  ← MCP Handlers, Tool Definitions
+├─────────────────────────┤
+│   Business Logic Layer  │  ← Database Manager
+├─────────────────────────┤
+│   Infrastructure Layer  │  ← Drivers, Utilities, CLI
+└─────────────────────────┘
+```
+
+### 2. Strategy Pattern (Database Drivers)
+
 Each database type implements the same interface but with different connection logic:
+
 ```javascript
+// Base interface for all database drivers
 class BaseDriver {
-  async connect() { throw new Error('Must implement') }
-  async query() { throw new Error('Must implement') }
-  async getSchema() { throw new Error('Must implement') }
+	async connect() {
+		throw new Error('Must implement')
+	}
+
+	async query() {
+		throw new Error('Must implement')
+	}
+
+	async getSchema() {
+		throw new Error('Must implement')
+	}
+
+	getConnectionString() {
+		throw new Error('Must implement')
+	}
+}
+
+// Database-specific implementations
+class PostgreSQLDriver extends BaseDriver {
+	async connect() {
+		// PostgreSQL-specific connection logic using pg
+	}
+}
+
+class MySQLDriver extends BaseDriver {
+	async connect() {
+		// MySQL-specific connection logic using mysql2
+	}
 }
 ```
 
-### 2. Factory Pattern (Driver Creation)
+### 3. Factory Pattern (Driver Creation)
+
 ```javascript
 export function createDriver(type, config) {
-  const DriverClass = SUPPORTED_DRIVERS[type.toLowerCase()]
-  return new DriverClass(config)
-}
-```
-
-### 3. Command Pattern (Tool Handlers)
-Each tool is a command with consistent interface:
-```javascript
-async handleTool(name, args) {
-  switch (name) {
-    case 'connect_database': return this.handleConnectDatabase(args)
-    // ...
-  }
+	const DriverClass = SUPPORTED_DRIVERS[type.toLowerCase()]
+	if (!DriverClass) {
+		throw new Error(`Unsupported database type: ${type}`)
+	}
+	return new DriverClass(config)
 }
 ```
 
 ### 4. Registry Pattern (Connection Management)
+
 ```javascript
 class DatabaseManager {
-  constructor() {
-    this.connections = new Map() // Registry of active connections
-  }
+	constructor() {
+		this.connections = new Map() // Registry of driver instances
+	}
+
+	addConnection(name, driver) {
+		this.connections.set(name, driver)
+	}
+
+	getConnection(name) {
+		return this.connections.get(name)
+	}
 }
 ```
+
+### 5. Declarative Configuration Pattern (Tool Definitions)
+
+Tools are defined declaratively separate from implementation:
+
+```javascript
+export const TOOLS = [
+	{
+		name: "execute_query",
+		description: "Execute a SQL query on a connected database",
+		inputSchema: {
+			type: "object",
+			properties: {
+				connection: {type: "string", description: "Connection name"},
+				sql: {type: "string", description: "SQL query to execute"},
+				params: {type: "array", description: "Query parameters"}
+			},
+			required: ["connection", "sql"]
+		}
+	}
+]
+```
+
+## Configuration System
+
+### Configuration Loading Strategy
+
+The Database MCP Server follows a configuration-first, connect-on-demand approach:
+
+- **No Auto-Connect**: Configuration is loaded at startup but connections are NOT established automatically
+- **On-Demand Connection**: Use `connect_database` tool to establish connections as needed
+- **Multiple Sources**: Configuration loaded from multiple file paths and environment variables
+- **Validation**: Configuration validation before connection attempts
+- **Transparency**: Clear configuration loading order and precedence
+
+### Configuration Flow
+
+```
+1. Server Startup
+   ↓
+2. Load Config Files (database-config.json, config.json, or DATABASE_CONFIG_PATH)
+   ↓
+3. Load Environment Variables (DB_HOST, DB_PORT, DB_TYPE, etc.)
+   ↓
+4. Display Configuration Status
+   ↓
+5. Server Ready (no connections established)
+   ↓
+6. AI Uses connect_database Tool
+   ↓
+7. Connection Established On-Demand
+```
+
+### Configuration Benefits
+
+This approach provides several benefits:
+
+- **Security**: No automatic connections reduce attack surface
+- **Flexibility**: Connect only to needed databases
+- **Resource Efficiency**: Avoid unnecessary connection overhead
+- **Control**: Explicit connection management
 
 ## Development Best Practices
 
 ### Code Organization
+
 - **Feature-based structure**: Group related functionality together
 - **Clear separation of concerns**: Each module has a single responsibility
 - **Dependency injection**: Pass dependencies rather than importing globally
 - **Interface segregation**: Small, focused interfaces
 
 ### Error Handling
+
 - **Consistent error format**: All errors follow the same structure
 - **Graceful degradation**: Server continues operating despite individual failures
 - **Detailed logging**: Comprehensive error information for debugging
 - **Resource cleanup**: Ensure connections are properly closed
 
 ### Security
+
 - **No credential persistence**: Credentials only in memory during active connections
 - **Parameter binding**: Prevent SQL injection through parameterized queries
 - **Connection isolation**: Each connection is independent
 - **SSL support**: Secure connections when configured
 
 ### Performance
+
 - **Connection pooling**: Reuse database connections efficiently
 - **Lazy loading**: Connect only when needed
 - **Resource limits**: Configurable pool sizes
@@ -143,130 +306,380 @@ class DatabaseManager {
 ### Adding New Database Types
 
 1. **Create Driver Class**:
+
 ```javascript
 // src/database/drivers/mongodb.js
-import { BaseDriver } from './base.js'
+import {BaseDriver} from './base.js'
 
 export class MongoDBDriver extends BaseDriver {
-  async connect() {
-    // MongoDB-specific connection logic
-  }
-  
-  async query(query, params) {
-    // MongoDB query execution
-  }
-  
-  async getSchema() {
-    // MongoDB schema introspection
-  }
+	async connect() {
+		// MongoDB-specific connection logic
+	}
+
+	async query(query, params) {
+		// MongoDB query execution
+	}
+
+	async getSchema() {
+		// MongoDB schema introspection
+	}
 }
 ```
 
 2. **Register Driver**:
+
 ```javascript
 // src/database/drivers/index.js
-import { MongoDBDriver } from './mongodb.js'
+import {MongoDBDriver} from './mongodb.js'
 
 export const SUPPORTED_DRIVERS = {
-  mongodb: MongoDBDriver,
-  mongo: MongoDBDriver,
-  // ... existing drivers
+	mongodb: MongoDBDriver,
+	mongo: MongoDBDriver,
+	// ... existing drivers
 }
 ```
 
 3. **Add Dependencies**:
+
 ```json
 // package.json
 {
-  "dependencies": {
-    "mongodb": "^6.0.0"
-  }
+	"dependencies": {
+		"mongodb": "^6.0.0"
+	}
 }
 ```
 
 ### Adding New MCP Tools
 
 1. **Define Tool Schema**:
+
 ```javascript
 // src/mcp/tools.js
 {
-  name: "backup_database",
-  description: "Create a backup of the database",
-  inputSchema: {
-    type: "object",
-    properties: {
-      connection: { type: "string" },
-      outputPath: { type: "string" }
-    },
-    required: ["connection", "outputPath"]
-  }
+	name: "backup_database",
+		description
+:
+	"Create a backup of the database",
+		inputSchema
+:
+	{
+		type: "object",
+			properties
+	:
+		{
+			connection: {
+				type: "string"
+			}
+		,
+			outputPath: {
+				type: "string"
+			}
+		}
+	,
+		required: ["connection", "outputPath"]
+	}
 }
 ```
 
 2. **Implement Handler**:
+
 ```javascript
 // src/mcp/handlers.js
-async handleBackupDatabase(args) {
-  try {
-    const connection = this.dbManager.getConnection(args.connection)
-    const result = await connection.driver.backup(args.outputPath)
-    return {
-      content: [{
-        type: "text",
-        text: JSON.stringify({ success: true, result }, null, 2)
-      }]
-    }
-  } catch (error) {
-    return {
-      content: [{
-        type: "text", 
-        text: JSON.stringify({ success: false, error: error.message }, null, 2)
-      }],
-      isError: true
-    }
-  }
+async
+handleBackupDatabase(args)
+{
+	try {
+		const connection = this.dbManager.getConnection(args.connection)
+		const result = await connection.driver.backup(args.outputPath)
+		return {
+			content: [{
+				type: "text",
+				text: JSON.stringify({success: true, result}, null, 2)
+			}]
+		}
+	} catch (error) {
+		return {
+			content: [{
+				type: "text",
+				text: JSON.stringify({success: false, error: error.message}, null, 2)
+			}],
+			isError: true
+		}
+	}
 }
 ```
 
 ## Testing Strategy
 
-### Unit Tests
-- **Driver testing**: Mock database connections, test query formatting
-- **Manager testing**: Test connection lifecycle, error handling
-- **Handler testing**: Mock database operations, verify MCP responses
+This project prioritizes **integration testing with real databases** using Docker Compose to validate actual database
+behavior rather than mocked interactions. This approach ensures tests catch real-world database edge cases, connection
+pooling issues, and database-specific SQL dialect behaviors.
 
-### Integration Tests
-- **Database integration**: Test with real database instances
-- **MCP protocol**: Test tool execution via MCP client
-- **Error scenarios**: Network failures, invalid credentials, etc.
+### Testing Philosophy
 
-### Example Test Structure:
+**🎯 Integration-First Approach**:
+
+- Test against real PostgreSQL and MySQL database instances using Docker Compose
+- Validate actual database behavior, connection pooling, and transaction handling
+- Catch timing issues, constraint violations, and database-specific quirks
+- Ensure reliability in production environments with real connection scenarios
+
+**📋 Test Categories**:
+
+```
+test/
+├── integration/           # Primary focus - Real database testing
+│   ├── setup/database-config.js  # Test database configurations
+│   └── database/         # DatabaseManager with real databases
+│       ├── postgresql.test.js    # PostgreSQL-specific tests
+│       ├── mysql.test.js         # MySQL-specific tests
+│       └── database-manager.test.js # Cross-database tests
+└── unit/                 # Future - Fast feedback for pure logic
+    └── utils/            # Only for non-database utilities
+```
+
+### Integration Testing Rules
+
+#### **1. Real Database Testing**
+
+- **ALWAYS** use Docker Compose with actual PostgreSQL and MySQL instances
+- Test DatabaseManager as the primary interface (it proxies all driver functionality)
+- Separate database-specific tests for PostgreSQL and MySQL unique features
+- Cross-database tests for multi-database scenarios and export/import functionality
+
+#### **2. Test Data Isolation**
+
+- Use **unique table/schema names** per test to avoid cross-contamination:
+
 ```javascript
-// test/drivers/postgresql.test.js
-import { PostgreSQLDriver } from '../../src/database/drivers/postgresql.js'
+beforeEach(() => {
+  const testId = randomUUID().replace(/-/g, '_')
+  testTableName = `test_table_${testId}`
+  connectionName = `test_connection_${testId}`
+})
+```
 
-describe('PostgreSQLDriver', () => {
-  it('should connect successfully with valid config', async () => {
-    const driver = new PostgreSQLDriver(validConfig)
-    await expect(driver.connect()).resolves.toBeDefined()
+Each table, connection, or database object should always be unique, so tests cannot interfere with each other.
+
+#### **3. Database Manager Focus**
+
+Since the DatabaseManager proxies all driver functionality and handlers are just wrappers, focus testing on:
+
+- **DatabaseManager**: Core business logic with real databases
+- **Database-specific drivers**: PostgreSQL vs MySQL behavior differences
+- **Cross-database scenarios**: Multiple connections, export/import, mixed operations
+
+### Concrete Assertions
+
+**Always use definite assertions in tests, never vague type checks or loose comparisons.** Tests should validate exact
+expected values and concrete ranges rather than just checking types or using imprecise comparisons. For example, use
+`expect(result.rowCount).toBe(2)` instead of `expect(result.rowCount).toBeGreaterThan(0)`, and
+`expect(connection.isConnected()).toBe(true)` instead of `expect(connection.isConnected()).toBeTruthy()`. When ranges are
+necessary, use concrete bounds like `expect(queryTime).toBeGreaterThan(10)` and `expect(queryTime).toBeLessThan(5000)`.
+
+This approach ensures tests provide clear pass/fail criteria and catch regressions definitively. Concrete assertions
+also serve as living documentation, clearly communicating the expected database behavior to developers reading the tests.
+
+**Benefits of concrete assertions:**
+
+- Eliminate ambiguity in test results
+- Make test failures more actionable by showing exact mismatches
+- Prevent tests from accidentally passing when they should fail
+- Provide precise specifications of expected database behavior
+- Serve as executable documentation for the codebase
+
+### Test Setup and Commands
+
+**Complete Test Automation (Recommended):**
+
+```bash
+# Full automated test cycle - start databases, run tests, cleanup
+npm run test:full
+```
+
+**Manual Test Environment Setup:**
+
+```bash
+# Start PostgreSQL and MySQL via Docker Compose
+npm run test:setup
+
+# Run integration tests (with databases running)
+npm run test:integration
+
+# Stop databases when done
+npm run test:teardown
+```
+
+**Alternative - Manual Docker Compose:**
+
+```bash
+# Start databases
+docker-compose -f docker-compose.test.yml up -d
+
+# Wait for databases to be ready
+./scripts/wait-for-databases.sh
+
+# Run tests
+npm run test:integration
+
+# Stop databases
+docker-compose -f docker-compose.test.yml down
+```
+
+**Development Testing:**
+
+```bash
+npm run test:unit  # Future - pure logic tests
+npm test           # All tests (currently runs vitest)
+```
+
+### Test Writing Standards
+
+#### **Test Organization and Naming**
+
+**File Naming Convention**:
+
+```
+test/integration/database/[database-type].test.js     # Database-specific tests
+test/integration/database/database-manager.test.js    # Cross-database tests
+test/unit/utils/[utility-name].test.js               # Future - pure utilities
+```
+
+#### **Test Suite Structure**
+
+* GIVEN/WHEN/THEN Structure - Always structure tests using clear GIVEN/WHEN/THEN comments for readability
+* sut - **System Under Test** - Name convention for variable which represents component being tested (alternatively use descriptive names like `dbManager` for DatabaseManager)
+* Tests for same method should always be grouped together (happy path, unhappy path, edge cases, etc)
+
+```javascript
+describe('[DatabaseType] Integration Tests', () => {
+  // Setup variables
+  let dbManager, testConnectionNames  // dbManager = System Under Test (or use 'sut')
+
+  beforeEach(() => {
+    // Component initialization
+    dbManager = new DatabaseManager()
+    testConnectionNames = []
   })
-  
-  it('should throw error with invalid config', async () => {
-    const driver = new PostgreSQLDriver(invalidConfig)
-    await expect(driver.connect()).rejects.toThrow()
+
+  afterEach(async () => {
+    // Cleanup test connections
+    for (const connectionName of testConnectionNames) {
+      try {
+        if (dbManager.hasConnection(connectionName)) {
+          await dbManager.disconnect(connectionName)
+        }
+      } catch (error) {
+        // Ignore cleanup errors
+      }
+    }
+    await dbManager.disconnectAll()
+  })
+
+  describe('Connection Management', () => {
+    // Happy path tests first
+    it('should connect successfully with valid [database] configuration', async () => {
+      // GIVEN - Valid database configuration
+      const connectionName = `test-${randomUUID()}`
+      testConnectionNames.push(connectionName)
+      const config = { ...databaseConfig, name: connectionName }
+
+      // WHEN - Connection is established
+      const result = await dbManager.connect(config)
+
+      // THEN - Should return connection info
+      expect(result.success).toBe(true)
+      expect(result.name).toBe(connectionName)
+      expect(result.type).toBe('postgresql') // or 'mysql'
+    })
+
+    // Unhappy path tests second
+    it('should throw error when invalid credentials provided', async () => {
+      // GIVEN - Invalid credentials
+      const invalidConfig = { ...databaseConfig, password: 'wrongpassword' }
+
+      // WHEN/THEN - Connection should fail
+      await expect(dbManager.connect(invalidConfig)).rejects.toThrow()
+    })
+  })
+
+  describe('Query Execution', () => {
+    // Database-specific query tests
+    // PostgreSQL: $1, $2 parameters
+    // MySQL: ? parameters
+    // Transaction handling
+    // Schema operations
   })
 })
 ```
 
+#### **Database-Specific Test Examples**
+
+**PostgreSQL Tests (`postgresql.test.js`)**:
+```javascript
+it('should execute parameterized query with PostgreSQL syntax', async () => {
+  // GIVEN - Active PostgreSQL connection
+  // WHEN - PostgreSQL parameterized query executed
+  const result = await dbManager.executeQuery(
+    connectionName,
+    'SELECT $1::text as message, $2::int as number',
+    ['Hello PostgreSQL', 42]
+  )
+  // THEN - Should return correct results
+  expect(result.rows[0].message).toBe('Hello PostgreSQL')
+  expect(result.rows[0].number).toBe(42)
+})
+```
+
+**MySQL Tests (`mysql.test.js`)**:
+```javascript
+it('should execute parameterized query with MySQL syntax', async () => {
+  // GIVEN - Active MySQL connection
+  // WHEN - MySQL parameterized query executed
+  const result = await dbManager.executeQuery(
+    connectionName,
+    'SELECT ? as message, ? as number',
+    ['Hello MySQL', 42]
+  )
+  // THEN - Should return correct results with MySQL quirks
+  expect(result.rows[0].message).toBe('Hello MySQL')
+  expect(result.rows[0].number).toBe(42)
+  expect(result.insertId).toBeDefined() // MySQL-specific
+})
+```
+
+**Cross-Database Tests (`database-manager.test.js`)**:
+```javascript
+it('should handle multiple concurrent connections across database types', async () => {
+  // GIVEN - PostgreSQL and MySQL configurations
+  // WHEN - Both connections established
+  // THEN - Should manage both connection types simultaneously
+})
+```
+
+This testing strategy is specifically designed for testing database operations with real external systems rather than mocked dependencies. The key principles focus on:
+
+1. **Integration-first approach** with real PostgreSQL and MySQL instances
+2. **Database Manager focus** since it proxies all driver functionality
+3. **Database-specific testing** for PostgreSQL vs MySQL differences
+4. **Concrete assertions** rather than vague type checks
+5. **Test data isolation** using unique identifiers
+6. **GIVEN/WHEN/THEN structure** for clear test organization
+7. **Systematic error handling** testing alongside happy paths
+8. **Automated test environment setup** using Docker Compose
+
 ## Monitoring and Observability
 
 ### Logging Strategy
+
 - **Structured logging**: JSON format for machine parsing
 - **Log levels**: DEBUG, INFO, WARN, ERROR
 - **Contextual information**: Include connection names, query snippets, timing
 - **Security**: Never log credentials or sensitive data
 
 ### Metrics to Track
+
 - Connection pool utilization
 - Query execution times
 - Error rates by database type
@@ -274,35 +687,41 @@ describe('PostgreSQLDriver', () => {
 - Tool usage patterns
 
 ### Health Checks
+
 ```javascript
 // Example health check endpoint
-async healthCheck() {
-  const connections = this.dbManager.listConnections()
-  const results = await Promise.allSettled(
-    connections.map(conn => this.dbManager.testConnection(conn.name))
-  )
-  
-  return {
-    status: results.every(r => r.status === 'fulfilled') ? 'healthy' : 'degraded',
-    connections: results.length,
-    timestamp: new Date().toISOString()
-  }
+async
+healthCheck()
+{
+	const connections = this.dbManager.listConnections()
+	const results = await Promise.allSettled(
+		connections.map(conn => this.dbManager.testConnection(conn.name))
+	)
+
+	return {
+		status: results.every(r => r.status === 'fulfilled') ? 'healthy' : 'degraded',
+		connections: results.length,
+		timestamp: new Date().toISOString()
+	}
 }
 ```
 
 ## Deployment Considerations
 
 ### NPX Distribution
+
 - **Executable permissions**: Ensure CLI script has proper permissions
 - **Shebang**: Use `#!/usr/bin/env node` for cross-platform compatibility
 - **Package.json bin**: Proper binary configuration for NPX
 
 ### Environment Configuration
+
 - **12-factor app**: Configuration via environment variables
 - **Secrets management**: Use secure credential storage in production
 - **Configuration validation**: Validate all config on startup
 
 ### Process Management
+
 - **Graceful shutdown**: Handle SIGTERM/SIGINT signals
 - **Resource cleanup**: Close all database connections on exit
 - **Error recovery**: Restart on unhandled errors
@@ -310,41 +729,48 @@ async healthCheck() {
 ## Common Pitfalls and Solutions
 
 ### 1. Connection Leaks
+
 **Problem**: Not properly closing database connections
-**Solution**: 
+**Solution**:
+
 ```javascript
 // Always cleanup in finally blocks
 try {
-  const result = await connection.query(sql)
-  return result
+	const result = await connection.query(sql)
+	return result
 } finally {
-  if (connection) connection.release()
+	if (connection) connection.release()
 }
 ```
 
 ### 2. Blocking Operations
+
 **Problem**: Long-running queries blocking the event loop
 **Solution**: Use connection pools and proper async/await patterns
 
 ### 3. Memory Leaks
+
 **Problem**: Accumulating connections or cached data
 **Solution**: Implement proper cleanup and resource limits
 
 ### 4. Error Propagation
+
 **Problem**: Swallowing errors or poor error context
-**Solution**: 
+**Solution**:
+
 ```javascript
 // Maintain error context through the stack
 try {
-  await operation()
+	await operation()
 } catch (error) {
-  throw new Error(`Operation failed for connection '${name}': ${error.message}`)
+	throw new Error(`Operation failed for connection '${name}': ${error.message}`)
 }
 ```
 
 ## Future Enhancements
 
 ### Planned Features
+
 1. **Query result caching** for repeated operations
 2. **Connection pooling optimization** with usage analytics
 3. **Bulk operations** for large data sets
@@ -353,9 +779,11 @@ try {
 6. **Performance monitoring** with query analysis
 
 ### Scalability Considerations
+
 - **Horizontal scaling**: Multiple server instances
 - **Load balancing**: Distribute connections across instances
 - **Configuration management**: Centralized config for multiple instances
 - **Service discovery**: Dynamic database endpoint resolution
 
-This architecture provides a solid foundation for a production-ready database MCP server while maintaining simplicity and extensibility.
+This architecture provides a solid foundation for a production-ready database MCP server while maintaining simplicity
+and extensibility.

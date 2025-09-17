@@ -18,8 +18,6 @@ export class MySQLDriver extends BaseDriver {
       user: this.config.user,
       password: this.config.password,
       connectionLimit: this.config.maxConnections || 10,
-      acquireTimeout: this.config.connectionTimeout || 5000,
-      timeout: this.config.queryTimeout || 60000,
       ssl: this.config.ssl || false,
       charset: 'utf8mb4'
     }
@@ -39,7 +37,7 @@ export class MySQLDriver extends BaseDriver {
 
     try {
       const [rows, fields] = await this.pool.execute(sql, params)
-      return this.formatResults({ rows, fields })
+      return this.formatResults({ rows, fields, insertId: rows.insertId })
     } catch (error) {
       throw new Error(`MySQL query error: ${error.message}`)
     }
@@ -58,14 +56,60 @@ export class MySQLDriver extends BaseDriver {
     }
   }
 
+  async getSchema() {
+    if (!this.pool) {
+      throw new Error('Database not connected. Call connect() first.')
+    }
+
+    try {
+      const [tablesResult] = await this.pool.execute(`
+        SELECT TABLE_NAME
+        FROM INFORMATION_SCHEMA.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+        ORDER BY TABLE_NAME
+      `)
+
+      const tables = []
+
+      for (const table of tablesResult) {
+        const [columnsResult] = await this.pool.execute(`
+          SELECT
+            COLUMN_NAME,
+            DATA_TYPE,
+            IS_NULLABLE,
+            COLUMN_DEFAULT
+          FROM INFORMATION_SCHEMA.COLUMNS
+          WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+          ORDER BY ORDINAL_POSITION
+        `, [table.TABLE_NAME])
+
+        tables.push({
+          name: table.TABLE_NAME,
+          columns: columnsResult.map(col => ({
+            name: col.COLUMN_NAME,
+            type: col.DATA_TYPE,
+            nullable: col.IS_NULLABLE === 'YES',
+            default: col.COLUMN_DEFAULT
+          }))
+        })
+      }
+
+      return { tables }
+    } catch (error) {
+      throw new Error(`MySQL schema error: ${error.message}`)
+    }
+  }
+
   formatResults(result) {
     if (!result || !result.rows) {
-      return { rows: [], rowCount: 0 }
+      return { success: true, rows: [], rowCount: 0 }
     }
-    
+
     return {
+      success: true,
       rows: Array.isArray(result.rows) ? result.rows : [result.rows],
       rowCount: Array.isArray(result.rows) ? result.rows.length : 1,
+      insertId: result.insertId,
       fields: result.fields
     }
   }

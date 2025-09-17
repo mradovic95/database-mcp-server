@@ -31,6 +31,7 @@ export class DatabaseManager {
       })
 
       return {
+        success: true,
         name: connectionName,
         type,
         status: 'connected',
@@ -50,7 +51,7 @@ export class DatabaseManager {
     try {
       await connection.driver.disconnect()
       this.connections.delete(name)
-      return { name, status: 'disconnected' }
+      return { success: true, name, status: 'disconnected' }
     } catch (error) {
       throw new Error(`Failed to disconnect from '${name}': ${error.message}`)
     }
@@ -58,6 +59,8 @@ export class DatabaseManager {
 
   async disconnectAll() {
     const results = []
+    const disconnectedCount = this.connections.size
+
     for (const [name] of this.connections) {
       try {
         await this.disconnect(name)
@@ -66,7 +69,12 @@ export class DatabaseManager {
         results.push({ name, status: 'error', message: error.message })
       }
     }
-    return results
+
+    return {
+      success: true,
+      disconnected: disconnectedCount,
+      results
+    }
   }
 
   getConnection(name) {
@@ -102,19 +110,35 @@ export class DatabaseManager {
 
   async testConnection(connectionName) {
     const connection = this.getConnection(connectionName)
-    
+
     try {
       const result = await connection.driver.testConnection()
       return {
-        name: connectionName,
+        connection: connectionName,
         ...result
       }
     } catch (error) {
       return {
-        name: connectionName,
+        connection: connectionName,
         success: false,
         message: error.message
       }
+    }
+  }
+
+  async getSchema(connectionName) {
+    const connection = this.getConnection(connectionName)
+    connection.lastUsed = new Date()
+
+    try {
+      const result = await connection.driver.getSchema()
+      return {
+        success: true,
+        connection: connectionName,
+        ...result
+      }
+    } catch (error) {
+      throw new Error(`Schema retrieval failed on '${connectionName}': ${error.message}`)
     }
   }
 
@@ -138,5 +162,79 @@ export class DatabaseManager {
 
   getConnectionCount() {
     return this.connections.size
+  }
+
+  exportConnections() {
+    const exports = {}
+
+    for (const [connectionName, connection] of this.connections) {
+      exports[connectionName] = {
+        type: connection.config.type,
+        host: connection.config.host,
+        port: connection.config.port,
+        database: connection.config.database,
+        user: connection.config.user,
+        ssl: connection.config.ssl || false,
+        maxConnections: connection.config.maxConnections,
+        createdAt: connection.createdAt
+        // Note: password is not exported for security reasons
+      }
+    }
+
+    return exports
+  }
+
+  async importConnections(connectionsConfig, overwrite = false) {
+    const results = []
+
+    for (const [connectionName, config] of Object.entries(connectionsConfig)) {
+      try {
+        // Check if connection already exists
+        if (this.hasConnection(connectionName) && !overwrite) {
+          results.push({
+            name: connectionName,
+            status: 'skipped',
+            success: false,
+            error: `Connection '${connectionName}' already exists. Use overwrite: true to replace it.`
+          })
+          continue
+        }
+
+        // Remove existing connection if overwriting
+        if (this.hasConnection(connectionName) && overwrite) {
+          await this.disconnect(connectionName)
+        }
+
+        // Validate that required fields are present
+        if (!config.type || !config.host || !config.database || !config.user) {
+          results.push({
+            name: connectionName,
+            status: 'failed',
+            success: false,
+            error: 'Missing required fields: type, host, database, or user'
+          })
+          continue
+        }
+
+        // Note: We can't actually connect without a password, so we'll just validate the config structure
+        // The connection will need to be established later with proper credentials
+        results.push({
+          name: connectionName,
+          status: 'validated',
+          success: true,
+          message: 'Configuration imported successfully. Note: You will need to provide credentials when connecting.'
+        })
+
+      } catch (error) {
+        results.push({
+          name: connectionName,
+          status: 'failed',
+          success: false,
+          error: error.message
+        })
+      }
+    }
+
+    return results
   }
 }

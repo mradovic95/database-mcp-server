@@ -29,14 +29,20 @@ export class BaseDriver {
     }
   }
 
+  async getSchema() {
+    throw new Error('getSchema method must be implemented by subclass')
+  }
+
 
   formatResults(result) {
     if (!result || !result.rows) {
-      return { rows: [], rowCount: 0 }
+      return { success: true, rows: [], rowCount: 0 }
     }
     return {
+      success: true,
       rows: result.rows,
-      rowCount: result.rowCount || result.rows.length
+      rowCount: result.rowCount || result.rows.length,
+      insertId: result.insertId
     }
   }
 

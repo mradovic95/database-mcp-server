@@ -274,7 +274,7 @@ export class ToolHandlers {
     try {
       logger.info('Retrieving all available configurations')
       const configNames = configManager.getAllConnections()
-      
+
       const configurations = {}
       for (const name of configNames) {
         const config = configManager.getConnectionConfig(name)
@@ -290,9 +290,9 @@ export class ToolHandlers {
           }
         }
       }
-      
+
       logger.info(`Found ${configNames.length} available configurations`)
-      
+
       return {
         content: [
           {
@@ -308,6 +308,88 @@ export class ToolHandlers {
       }
     } catch (error) {
       logger.error(`Failed to retrieve configurations: ${error.message}`)
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message
+            }, null, 2)
+          }
+        ],
+        isError: true
+      }
+    }
+  }
+
+  async handleExportConnections() {
+    try {
+      logger.info('Exporting database connections')
+      const connections = this.dbManager.exportConnections()
+      logger.info(`Exported ${Object.keys(connections).length} connection configurations`)
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              connections,
+              exportedAt: new Date().toISOString(),
+              count: Object.keys(connections).length,
+              message: `Exported ${Object.keys(connections).length} database connection${Object.keys(connections).length === 1 ? '' : 's'}. Note: Passwords are not included for security reasons.`
+            }, null, 2)
+          }
+        ]
+      }
+    } catch (error) {
+      logger.error(`Failed to export connections: ${error.message}`)
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: false,
+              error: error.message
+            }, null, 2)
+          }
+        ],
+        isError: true
+      }
+    }
+  }
+
+  async handleImportConnections(args) {
+    try {
+      logger.info(`Importing database connections with overwrite: ${args.overwrite || false}`)
+      const results = await this.dbManager.importConnections(args.connections, args.overwrite)
+      const successful = results.filter(r => r.success).length
+      const failed = results.filter(r => !r.success).length
+
+      logger.info(`Import completed: ${successful} successful, ${failed} failed`)
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({
+              success: true,
+              importResults: results,
+              importedAt: new Date().toISOString(),
+              summary: {
+                total: results.length,
+                successful,
+                failed,
+                skipped: results.filter(r => r.status === 'skipped').length
+              },
+              message: `Import completed: ${successful} successful, ${failed} failed. Note: Imported configurations are validated but not connected - you'll need to provide passwords when connecting.`
+            }, null, 2)
+          }
+        ]
+      }
+    } catch (error) {
+      logger.error(`Failed to import connections: ${error.message}`)
       return {
         content: [
           {
@@ -341,6 +423,10 @@ export class ToolHandlers {
         return this.handleConnectionInfo(args)
       case 'show_configurations':
         return this.handleShowConfigurations(args)
+      case 'export_connections':
+        return this.handleExportConnections(args)
+      case 'import_connections':
+        return this.handleImportConnections(args)
       default:
         return {
           content: [

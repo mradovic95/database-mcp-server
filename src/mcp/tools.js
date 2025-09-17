@@ -149,5 +149,32 @@ export const TOOLS = [
       properties: {},
       additionalProperties: false
     }
+  },
+  {
+    name: "export_connections",
+    description: "Export connection configurations for backup or migration",
+    inputSchema: {
+      type: "object",
+      properties: {},
+      additionalProperties: false
+    }
+  },
+  {
+    name: "import_connections",
+    description: "Import connection configurations from backup",
+    inputSchema: {
+      type: "object",
+      properties: {
+        connections: {
+          type: "object",
+          description: "Connection configurations to import"
+        },
+        overwrite: {
+          type: "boolean",
+          description: "Whether to overwrite existing connections with same name (default: false)"
+        }
+      },
+      required: ["connections"]
+    }
   }
 ]
