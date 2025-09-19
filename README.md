@@ -138,7 +138,10 @@ npx @mihailoradovi/database-mcp-server --standalone --log-level DEBUG
 - `password` (required): Database password
 - `port` (optional): Database port (uses default for database type)
 - `ssl` (optional): Enable SSL/TLS connection (default: false)
-- `maxConnections` (optional): Maximum connections in pool (default: 10)
+- `maxConnections` (optional): Maximum connections in pool (default: 5)
+- `idleTimeout` (optional): Idle connection timeout in milliseconds (default: 60000)
+- `connectionTimeout` (optional): Connection timeout in milliseconds (default: 5000)
+- `acquireTimeout` (optional): Connection acquire timeout in milliseconds (default: 5000)
 
 ### Environment Variables
 
@@ -167,7 +170,10 @@ The configuration file supports multiple database connections:
 		"user": "username",
 		"password": "password",
 		"ssl": false,
-		"maxConnections": 10
+		"maxConnections": 5,
+		"idleTimeout": 60000,
+		"connectionTimeout": 5000,
+		"acquireTimeout": 5000
 	}
 }
 ```
@@ -254,7 +260,10 @@ Connect to a database with specified configuration.
 		"user": "username",
 		"password": "password",
 		"ssl": false,
-		"maxConnections": 10
+		"maxConnections": 5,
+		"idleTimeout": 60000,
+		"connectionTimeout": 5000,
+		"acquireTimeout": 5000
 	}
 }
 ```
@@ -269,7 +278,10 @@ Connect to a database with specified configuration.
 - `name` (optional): Connection name (auto-generated if not provided)
 - `port` (optional): Database port (uses default for database type)
 - `ssl` (optional): Use SSL connection (default: false)
-- `maxConnections` (optional): Maximum connections in pool (default: 10)
+- `maxConnections` (optional): Maximum connections in pool (default: 5)
+- `idleTimeout` (optional): Idle connection timeout in milliseconds (default: 60000)
+- `connectionTimeout` (optional): Connection timeout in milliseconds (default: 5000)
+- `acquireTimeout` (optional): Connection acquire timeout in milliseconds (default: 5000)
 
 #### `connect_from_config`
 

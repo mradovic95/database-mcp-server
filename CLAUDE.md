@@ -227,7 +227,13 @@ export const TOOLS = [
 				host: {type: "string", description: "Database host"},
 				database: {type: "string", description: "Database name"},
 				user: {type: "string", description: "Database user"},
-				password: {type: "string", description: "Database password"}
+				password: {type: "string", description: "Database password"},
+				port: {type: "number", description: "Database port (optional)"},
+				ssl: {type: "boolean", description: "Use SSL connection (optional)"},
+				maxConnections: {type: "number", description: "Maximum connections in pool (optional)"},
+				idleTimeout: {type: "number", description: "Idle connection timeout in milliseconds (optional)"},
+				connectionTimeout: {type: "number", description: "Connection timeout in milliseconds (optional)"},
+				acquireTimeout: {type: "number", description: "Connection acquire timeout in milliseconds (optional)"}
 			},
 			required: ["type", "host", "database", "user", "password"]
 		}
