@@ -217,6 +217,33 @@ Tools are defined declaratively separate from implementation:
 ```javascript
 export const TOOLS = [
 	{
+		name: "connect_database",
+		description: "Connect to a database with the specified configuration",
+		inputSchema: {
+			type: "object",
+			properties: {
+				type: {type: "string", description: "Database type (postgresql, mysql)"},
+				name: {type: "string", description: "Connection name (optional)"},
+				host: {type: "string", description: "Database host"},
+				database: {type: "string", description: "Database name"},
+				user: {type: "string", description: "Database user"},
+				password: {type: "string", description: "Database password"}
+			},
+			required: ["type", "host", "database", "user", "password"]
+		}
+	},
+	{
+		name: "connect_from_config",
+		description: "Connect to a database using a named configuration from config file",
+		inputSchema: {
+			type: "object",
+			properties: {
+				configName: {type: "string", description: "Name of the connection configuration"},
+				connectionName: {type: "string", description: "Custom name for this connection (optional)"}
+			}
+		}
+	},
+	{
 		name: "execute_query",
 		description: "Execute a SQL query on a connected database",
 		inputSchema: {
@@ -227,6 +254,56 @@ export const TOOLS = [
 				params: {type: "array", description: "Query parameters"}
 			},
 			required: ["connection", "sql"]
+		}
+	},
+	{
+		name: "list_connections",
+		description: "List all active database connections"
+	},
+	{
+		name: "test_connection",
+		description: "Test the connectivity of a database connection",
+		inputSchema: {
+			type: "object",
+			properties: {
+				connection: {type: "string", description: "Connection name"}
+			},
+			required: ["connection"]
+		}
+	},
+	{
+		name: "close_connection",
+		description: "Close a database connection",
+		inputSchema: {
+			type: "object",
+			properties: {
+				connection: {type: "string", description: "Connection name"}
+			},
+			required: ["connection"]
+		}
+	},
+	{
+		name: "connection_info",
+		description: "Get detailed information about a specific connection"
+	},
+	{
+		name: "show_configurations",
+		description: "Show all database configurations available in the config file"
+	},
+	{
+		name: "export_connections",
+		description: "Export connection configurations for backup or migration"
+	},
+	{
+		name: "import_connections",
+		description: "Import connection configurations from backup",
+		inputSchema: {
+			type: "object",
+			properties: {
+				connections: {type: "object", description: "Connection configurations to import"},
+				overwrite: {type: "boolean", description: "Whether to overwrite existing connections"}
+			},
+			required: ["connections"]
 		}
 	}
 ]
@@ -432,11 +509,9 @@ test/
 ├── integration/           # Primary focus - Real database testing
 │   ├── setup/database-config.js  # Test database configurations
 │   └── database/         # DatabaseManager with real databases
-│       ├── postgresql.test.js    # PostgreSQL-specific tests
-│       ├── mysql.test.js         # MySQL-specific tests
-│       └── database-manager.test.js # Cross-database tests
-└── unit/                 # Future - Fast feedback for pure logic
-    └── utils/            # Only for non-database utilities
+│       ├── database-manager-postgresql.test.js    # PostgreSQL-specific tests
+│       └── database-manager-mysql.test.js         # MySQL-specific tests
+└── drivers/              # Future - Driver-specific unit tests
 ```
 
 ### Integration Testing Rules
@@ -530,7 +605,6 @@ docker-compose -f docker-compose.test.yml down
 **Development Testing:**
 
 ```bash
-npm run test:unit  # Future - pure logic tests
 npm test           # All tests (currently runs vitest)
 ```
 
@@ -541,9 +615,8 @@ npm test           # All tests (currently runs vitest)
 **File Naming Convention**:
 
 ```
-test/integration/database/[database-type].test.js     # Database-specific tests
-test/integration/database/database-manager.test.js    # Cross-database tests
-test/unit/utils/[utility-name].test.js               # Future - pure utilities
+test/integration/database/database-manager-postgresql.test.js     # PostgreSQL-specific tests
+test/integration/database/database-manager-mysql.test.js        # MySQL-specific tests
 ```
 
 #### **Test Suite Structure**
@@ -649,7 +722,7 @@ it('should execute parameterized query with MySQL syntax', async () => {
 })
 ```
 
-**Cross-Database Tests (`database-manager.test.js`)**:
+**Database-Specific Tests**:
 ```javascript
 it('should handle multiple concurrent connections across database types', async () => {
   // GIVEN - PostgreSQL and MySQL configurations

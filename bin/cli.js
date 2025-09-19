@@ -17,21 +17,23 @@ OPTIONS:
   --help, -h        Show this help message
   --version, -v     Show version information
   --log-level       Set log level (DEBUG, INFO, WARN, ERROR)
+  --standalone      Run in standalone mode with console logging (default: MCP mode)
 
 SUPPORTED DATABASES:
   ${getSupportedTypes().join(', ')}
 
 EXAMPLES:
-  # Start the server
+  # Start the server (MCP mode - silent by default)
   npx @mihailoradovi/database-mcp-server
 
-  # Start with debug logging
-  LOG_LEVEL=DEBUG npx @mihailoradovi/database-mcp-server
+  # Start in standalone mode with console logging
+  npx @mihailoradovi/database-mcp-server --standalone
 
-  # Set log level via command line
-  npx @mihailoradovi/database-mcp-server --log-level DEBUG
+  # Start standalone with debug logging
+  npx @mihailoradovi/database-mcp-server --standalone --log-level DEBUG
 
 ENVIRONMENT VARIABLES:
+  MCP_MODE                  Set to 'false' to disable MCP mode (default: true)
   LOG_LEVEL                 Set logging level (DEBUG, INFO, WARN, ERROR)
   DATABASE_CONFIG_PATH      Path to database configuration file
   DB_HOST                   Default database host

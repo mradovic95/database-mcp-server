@@ -1,6 +1,6 @@
 import winston from 'winston'
 
-const isMCPMode = process.env.MCP_MODE === 'true' || process.argv.includes('--mcp')
+const isMCPMode = process.env.MCP_MODE !== 'false' && !process.argv.includes('--standalone')
 
 const logger = winston.createLogger({
   level: isMCPMode ? 'silent' : (process.env.LOG_LEVEL?.toLowerCase() || 'info'),
