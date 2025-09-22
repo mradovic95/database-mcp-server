@@ -20,6 +20,9 @@
   ],
   "author": "Mihailo Radovic",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "node ./bin/cli.js",
     "test": "vitest",
