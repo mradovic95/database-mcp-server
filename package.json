@@ -1,5 +1,5 @@
 {
-  "name": "@mihailoradovi/database-mcp-server",
+  "name": "database-mcp-server",
   "version": "0.1.2",
   "description": "Node.js MCP server for runtime database connections with support for multiple database types",
   "type": "module",
@@ -20,9 +20,6 @@
   ],
   "author": "Mihailo Radovic",
   "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
     "start": "node ./bin/cli.js",
     "test": "vitest",
@@ -45,12 +42,18 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/mihailoradovi/database-mcp-server.git"
+    "url": "https://github.com/mradovic95/database-mcp-server.git"
   },
   "files": [
     "bin/",
     "src/",
     "examples/",
-    "README.md"
-  ]
+    "README.md",
+    "CLAUDE.md",
+    "package.json"
+  ],
+  "bugs": {
+    "url": "https://github.com/mradovic95/database-mcp-server/issues"
+  },
+  "homepage": "https://github.com/mradovic95/database-mcp-server#readme"
 }
