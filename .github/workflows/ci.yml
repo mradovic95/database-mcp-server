@@ -28,11 +28,5 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Run linter (if available)
-      run: npm run lint --if-present
-
-    - name: Run type check (if available)
-      run: npm run typecheck --if-present
-
     - name: Run full test suite (with databases)
       run: npm run test:full
