@@ -13,7 +13,7 @@ class DatabaseMCPServer {
   constructor() {
     this.server = new Server(
       {
-        name: 'database-mcp-server',
+        name: 'mcp-database-server',
         version: '1.0.0',
         description: 'MCP server for database connections and queries'
       },

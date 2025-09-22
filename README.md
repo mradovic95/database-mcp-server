@@ -71,13 +71,13 @@ With this MCP server, you can ask your AI assistant natural language questions a
 Run directly without installation:
 
 ```bash
-npx @mihailoradovi/database-mcp-server
+npx mcp-database-server
 ```
 
 #### Via npm
 
 ```bash
-npm install -g @mihailoradovi/database-mcp-server
+npm install -g mcp-database-server
 database-mcp-server
 ```
 
@@ -98,7 +98,7 @@ Add the Database MCP server to your Claude Desktop by editing the MCP configurat
 		"database": {
 			"command": "npx",
 			"args": [
-				"@mihailoradovi/database-mcp-server"
+				"mcp-database-server"
 			],
 			"env": {
 				"DB_HOST": "localhost",
@@ -124,7 +124,7 @@ access the file system, but environment variables are isolated to the MCP server
 		"database": {
 			"command": "npx",
 			"args": [
-				"@mihailoradovi/database-mcp-server"
+				"mcp-database-server"
 			],
 			"env": {
 				"PROD_DB_TYPE": "postgresql",
@@ -168,7 +168,7 @@ databases without configuration files.
 		"database": {
 			"command": "npx",
 			"args": [
-				"@mihailoradovi/database-mcp-server"
+				"mcp-database-server"
 			],
 			"env": {
 				"DATABASE_CONFIG_PATH": "/path/to/your/database-config.json"
@@ -190,7 +190,7 @@ Add to your `.mcp.json` file in your project root:
 		"database": {
 			"command": "npx",
 			"args": [
-				"@mihailoradovi/database-mcp-server"
+				"mcp-database-server"
 			],
 			"env": {
 				"DB_HOST": "localhost",
@@ -216,7 +216,7 @@ access the file system, but environment variables are isolated to the MCP server
 		"database": {
 			"command": "npx",
 			"args": [
-				"@mihailoradovi/database-mcp-server"
+				"mcp-database-server"
 			],
 			"env": {
 				"PROD_DB_TYPE": "postgresql",
@@ -260,7 +260,7 @@ databases without configuration files.
 		"database": {
 			"command": "npx",
 			"args": [
-				"@mihailoradovi/database-mcp-server"
+				"mcp-database-server"
 			],
 			"env": {
 				"DATABASE_CONFIG_PATH": "./database-config.json"
@@ -301,13 +301,13 @@ After configuration, restart Claude Desktop or reload Claude Code to enable data
 
 ```bash
 # Start with default settings (MCP mode - silent)
-npx @mihailoradovi/database-mcp-server
+npx mcp-database-server
 
 # Start in standalone mode with console logging
-npx @mihailoradovi/database-mcp-server --standalone
+npx mcp-database-server --standalone
 
 # Start standalone with debug logging
-npx @mihailoradovi/database-mcp-server --standalone --log-level DEBUG
+npx mcp-database-server --standalone --log-level DEBUG
 ```
 
 ## Configuration
@@ -720,32 +720,32 @@ establishing connections using `connect_database` with the imported configuratio
 
 ```bash
 # Basic start
-npx @mihailoradovi/database-mcp-server
+npx mcp-database-server
 
 # With debug logging
-LOG_LEVEL=DEBUG npx @mihailoradovi/database-mcp-server
+LOG_LEVEL=DEBUG npx mcp-database-server
 
 # Set log level via command line
-npx @mihailoradovi/database-mcp-server --log-level DEBUG
+npx mcp-database-server --log-level DEBUG
 
 # Show configuration status
-npx @mihailoradovi/database-mcp-server config
+npx mcp-database-server config
 
 # List available tools
-npx @mihailoradovi/database-mcp-server tools
+npx mcp-database-server tools
 ```
 
 ### Test Connection
 
 ```bash
 # Test specific connection
-npx @mihailoradovi/database-mcp-server test --type postgresql --host db.example.com --port 5432 --database myapp --user dbuser --password dbpass
+npx mcp-database-server test --type postgresql --host db.example.com --port 5432 --database myapp --user dbuser --password dbpass
 ```
 
 ### List Available Tools
 
 ```bash
-npx @mihailoradovi/database-mcp-server tools
+npx mcp-database-server tools
 ```
 
 ## Architecture & Project Structure
@@ -975,7 +975,7 @@ npm run test:coverage    # Run tests with coverage
 Enable debug logging for detailed information:
 
 ```bash
-LOG_LEVEL=DEBUG npx @mihailoradovi/database-mcp-server
+LOG_LEVEL=DEBUG npx mcp-database-server
 ```
 
 ## Contributing
@@ -992,6 +992,6 @@ MIT License - see LICENSE file for details.
 
 ## Support
 
-- **GitHub Issues**: https://github.com/mihailoradovi/database-mcp-server/issues
+- **GitHub Issues**: https://github.com/mradovic95/database-mcp-server/issues
 - **Documentation**: See the examples directory for usage examples
 - **MCP Protocol**: https://modelcontextprotocol.io

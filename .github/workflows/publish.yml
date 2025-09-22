@@ -95,9 +95,9 @@ jobs:
 
           ## 📦 Installation
           ```bash
-          npm install -g @mihailoradovi/database-mcp-server@${{ inputs.tag }}
+          npm install -g mcp-database-server@${{ inputs.tag }}
           # or
-          npx @mihailoradovi/database-mcp-server@${{ inputs.tag }}
+          npx mcp-database-server@${{ inputs.tag }}
           ```
 
           **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ env.PREVIOUS_VERSION }}...v${{ env.NEW_VERSION }}

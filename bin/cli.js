@@ -11,7 +11,7 @@ Database MCP Server v1.0.0
 A Model Context Protocol server for database connections and queries.
 
 USAGE:
-  npx @mihailoradovi/database-mcp-server [options]
+  npx mcp-database-server [options]
 
 OPTIONS:
   --help, -h        Show this help message
@@ -24,13 +24,13 @@ SUPPORTED DATABASES:
 
 EXAMPLES:
   # Start the server (MCP mode - silent by default)
-  npx @mihailoradovi/database-mcp-server
+  npx mcp-database-server
 
   # Start in standalone mode with console logging
-  npx @mihailoradovi/database-mcp-server --standalone
+  npx mcp-database-server --standalone
 
   # Start standalone with debug logging
-  npx @mihailoradovi/database-mcp-server --standalone --log-level DEBUG
+  npx mcp-database-server --standalone --log-level DEBUG
 
 ENVIRONMENT VARIABLES:
   MCP_MODE                  Set to 'false' to disable MCP mode (default: true)
@@ -43,7 +43,7 @@ ENVIRONMENT VARIABLES:
   DB_PASSWORD               Default database password
   DB_TYPE                   Default database type
 
-For more information, visit: https://github.com/mihailoradovi/database-mcp-server
+For more information, visit: https://github.com/mradovic95/database-mcp-server
 `)
 }
 
