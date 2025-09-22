@@ -87,8 +87,10 @@ database-mcp-server
 
 Add the Database MCP server to your Claude Desktop by editing the MCP configuration file:
 
-**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+**macOS/Linux:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+##### Option 1: Environment Variables (Recommended for Security)
 
 ```json
 {
@@ -97,20 +99,201 @@ Add the Database MCP server to your Claude Desktop by editing the MCP configurat
 			"command": "npx",
 			"args": [
 				"@mihailoradovi/database-mcp-server"
-			]
+			],
+			"env": {
+				"DB_HOST": "localhost",
+				"DB_PORT": "5432",
+				"DB_TYPE": "postgresql",
+				"DB_NAME": "myapp_db",
+				"DB_USER": "username",
+				"DB_PASSWORD": "password"
+			}
 		}
 	}
 }
 ```
 
-#### Claude Web (via MCP Proxy)
+**🔒 Security Note**: Environment variables are more secure than configuration files since AI agents can potentially
+access the file system, but environment variables are isolated to the MCP server process.
 
-For Claude Web integration, you can use an MCP proxy:
+##### Option 1b: Multiple Databases via Environment Variables (Secure Multi-DB Setup)
 
-```bash
-# Install and run an MCP proxy
-npx @modelcontextprotocol/server-proxy
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"PROD_DB_TYPE": "postgresql",
+				"PROD_DB_HOST": "prod-db.company.com",
+				"PROD_DB_PORT": "5432",
+				"PROD_DB_NAME": "production_db",
+				"PROD_DB_USER": "prod_user",
+				"PROD_DB_PASSWORD": "prod_password",
+				"PROD_DB_SSL": "true",
+				"DEV_DB_TYPE": "mysql",
+				"DEV_DB_HOST": "localhost",
+				"DEV_DB_PORT": "3306",
+				"DEV_DB_NAME": "development_db",
+				"DEV_DB_USER": "dev_user",
+				"DEV_DB_PASSWORD": "dev_password",
+				"STAGING_DB_TYPE": "postgresql",
+				"STAGING_DB_HOST": "staging-db.company.com",
+				"STAGING_DB_PORT": "5432",
+				"STAGING_DB_NAME": "staging_db",
+				"STAGING_DB_USER": "staging_user",
+				"STAGING_DB_PASSWORD": "staging_password"
+			}
+		}
+	}
+}
 ```
+
+**Environment Variable Pattern**: Use `{CONNECTION_NAME}_DB_{PARAMETER}` format where:
+
+- `{CONNECTION_NAME}` is the unique identifier for your database (e.g., PROD, DEV, STAGING)
+- `{PARAMETER}` is the database parameter (TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, etc.)
+
+**🔒 Security Benefit**: This approach keeps all sensitive credentials in environment variables while supporting multiple
+databases without configuration files.
+
+##### Option 2: Configuration File (Multiple Databases)
+
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"DATABASE_CONFIG_PATH": "/path/to/your/database-config.json"
+			}
+		}
+	}
+}
+```
+
+#### Claude Code Configuration
+
+Add to your `.mcp.json` file in your project root:
+
+##### Option 1: Environment Variables (Recommended for Security)
+
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"DB_HOST": "localhost",
+				"DB_PORT": "5432",
+				"DB_TYPE": "postgresql",
+				"DB_NAME": "myapp_db",
+				"DB_USER": "username",
+				"DB_PASSWORD": "password"
+			}
+		}
+	}
+}
+```
+
+**🔒 Security Note**: Environment variables are more secure than configuration files since AI agents can potentially
+access the file system, but environment variables are isolated to the MCP server process.
+
+##### Option 1b: Multiple Databases via Environment Variables (Secure Multi-DB Setup)
+
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"PROD_DB_TYPE": "postgresql",
+				"PROD_DB_HOST": "prod-db.company.com",
+				"PROD_DB_PORT": "5432",
+				"PROD_DB_NAME": "production_db",
+				"PROD_DB_USER": "prod_user",
+				"PROD_DB_PASSWORD": "prod_password",
+				"PROD_DB_SSL": "true",
+				"DEV_DB_TYPE": "mysql",
+				"DEV_DB_HOST": "localhost",
+				"DEV_DB_PORT": "3306",
+				"DEV_DB_NAME": "development_db",
+				"DEV_DB_USER": "dev_user",
+				"DEV_DB_PASSWORD": "dev_password",
+				"ANALYTICS_DB_TYPE": "postgresql",
+				"ANALYTICS_DB_HOST": "analytics-db.company.com",
+				"ANALYTICS_DB_PORT": "5432",
+				"ANALYTICS_DB_NAME": "analytics_db",
+				"ANALYTICS_DB_USER": "analytics_user",
+				"ANALYTICS_DB_PASSWORD": "analytics_password"
+			}
+		}
+	}
+}
+```
+
+**Environment Variable Pattern**: Use `{CONNECTION_NAME}_DB_{PARAMETER}` format where:
+
+- `{CONNECTION_NAME}` is the unique identifier for your database (e.g., PROD, DEV, ANALYTICS)
+- `{PARAMETER}` is the database parameter (TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, etc.)
+
+**🔒 Security Benefit**: This approach keeps all sensitive credentials in environment variables while supporting multiple
+databases without configuration files.
+
+##### Option 2: Configuration File (Multiple Databases)
+
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"DATABASE_CONFIG_PATH": "./database-config.json"
+			}
+		}
+	}
+}
+```
+
+**For both options above, when using a configuration file, create a `database-config.json` file:**
+
+```json
+{
+	"development": {
+		"type": "postgresql",
+		"host": "localhost",
+		"port": 5432,
+		"database": "dev_db",
+		"user": "dev_user",
+		"password": "dev_pass"
+	},
+	"staging": {
+		"type": "mysql",
+		"host": "staging-db.company.com",
+		"port": 3306,
+		"database": "staging_db",
+		"user": "stage_user",
+		"password": "stage_pass"
+	}
+}
+```
+
+After configuration, restart Claude Desktop or reload Claude Code to enable database management capabilities.
 
 ### Usage
 
@@ -145,6 +328,8 @@ npx @mihailoradovi/database-mcp-server --standalone --log-level DEBUG
 
 ### Environment Variables
 
+#### Standard Environment Variables
+
 | Variable               | Description                         | Default           |
 |------------------------|-------------------------------------|-------------------|
 | `LOG_LEVEL`            | Set logging level                   | `INFO`            |
@@ -155,6 +340,56 @@ npx @mihailoradovi/database-mcp-server --standalone --log-level DEBUG
 | `DB_USER`              | Default database user               | `""`              |
 | `DB_PASSWORD`          | Default database password           | `""`              |
 | `DB_TYPE`              | Default database type               | `postgresql`      |
+
+#### Multiple Database Environment Variables
+
+For multiple database connections, use the pattern `{CONNECTION_NAME}_DB_{PARAMETER}`:
+
+| Variable Pattern               | Description                             | Example                           |
+|--------------------------------|-----------------------------------------|-----------------------------------|
+| `{NAME}_DB_TYPE`               | Database type for named connection      | `PROD_DB_TYPE=postgresql`         |
+| `{NAME}_DB_HOST`               | Database hostname for named connection  | `PROD_DB_HOST=prod-db.com`        |
+| `{NAME}_DB_PORT`               | Database port for named connection      | `PROD_DB_PORT=5432`               |
+| `{NAME}_DB_NAME`               | Database name for named connection      | `PROD_DB_NAME=production`         |
+| `{NAME}_DB_USER`               | Database user for named connection      | `PROD_DB_USER=prod_user`          |
+| `{NAME}_DB_PASSWORD`           | Database password for named connection  | `PROD_DB_PASSWORD=secret`         |
+| `{NAME}_DB_SSL`                | Enable SSL for named connection         | `PROD_DB_SSL=true`                |
+| `{NAME}_DB_MAX_CONNECTIONS`    | Max connections for named connection    | `PROD_DB_MAX_CONNECTIONS=10`      |
+| `{NAME}_DB_IDLE_TIMEOUT`       | Idle timeout for named connection       | `PROD_DB_IDLE_TIMEOUT=60000`      |
+| `{NAME}_DB_CONNECTION_TIMEOUT` | Connection timeout for named connection | `PROD_DB_CONNECTION_TIMEOUT=5000` |
+| `{NAME}_DB_ACQUIRE_TIMEOUT`    | Acquire timeout for named connection    | `PROD_DB_ACQUIRE_TIMEOUT=5000`    |
+
+**Examples:**
+
+```bash
+# Production PostgreSQL database
+export PROD_DB_TYPE=postgresql
+export PROD_DB_HOST=prod-db.company.com
+export PROD_DB_PORT=5432
+export PROD_DB_NAME=production_db
+export PROD_DB_USER=prod_user
+export PROD_DB_PASSWORD=prod_password
+export PROD_DB_SSL=true
+
+# Development MySQL database
+export DEV_DB_TYPE=mysql
+export DEV_DB_HOST=localhost
+export DEV_DB_PORT=3306
+export DEV_DB_NAME=dev_db
+export DEV_DB_USER=dev_user
+export DEV_DB_PASSWORD=dev_password
+
+# Analytics PostgreSQL database
+export ANALYTICS_DB_TYPE=postgresql
+export ANALYTICS_DB_HOST=analytics-db.company.com
+export ANALYTICS_DB_PORT=5432
+export ANALYTICS_DB_NAME=analytics_db
+export ANALYTICS_DB_USER=analytics_user
+export ANALYTICS_DB_PASSWORD=analytics_password
+```
+
+**🔒 Security Advantage**: This pattern allows you to configure multiple databases securely using only environment
+variables, avoiding the need for configuration files that AI agents might access.
 
 ### Configuration File Format
 
@@ -686,11 +921,44 @@ npm run test:coverage    # Run tests with coverage
 
 ## Security Considerations
 
-- **No credential storage**: Credentials are only held in memory during active connections
-- **Connection isolation**: Each named connection is isolated from others
-- **Parameter binding**: All queries support parameter binding to prevent SQL injection
-- **SSL support**: Both PostgreSQL and MySQL drivers support SSL connections
-- **Resource limits**: Configurable connection pool limits
+### Credential Security
+
+- **Environment Variables vs Configuration Files**:
+    - **🔒 Environment Variables (Recommended)**: More secure since they're isolated to the MCP server process and not
+      accessible via filesystem
+    - **⚠️ Configuration Files**: AI agents can potentially read configuration files through the filesystem, exposing
+      sensitive credentials
+    - **Best Practice**: Use environment variables for production environments and sensitive credentials
+
+- **No persistent credential storage**: Database credentials are only held in memory during active connections and are
+  never persisted to disk
+- **Runtime credential management**: Passwords can be provided dynamically via `connect_database` tool calls without
+  being stored in configuration
+
+### Connection Security
+
+- **Connection isolation**: Each named connection is completely isolated from others, preventing cross-connection data
+  access
+- **SSL/TLS support**: Both PostgreSQL and MySQL drivers support encrypted connections when SSL is enabled
+- **Parameter binding**: All SQL queries use parameterized statements to prevent SQL injection attacks
+- **Resource limits**: Configurable connection pool limits prevent resource exhaustion attacks
+
+### AI Agent Security Considerations
+
+- **File system access**: AI agents using this MCP server may have access to read files in the working directory
+- **Query inspection**: AI agents can see and modify SQL queries before execution
+- **Connection information**: Connection metadata (excluding passwords) is visible to AI agents
+- **Credential isolation**: Use environment variables to keep sensitive credentials outside of AI agent filesystem
+  access
+
+### Production Security Recommendations
+
+1. **Use environment variables** for all sensitive configuration data
+2. **Enable SSL connections** for all database connections in production
+3. **Implement database-level access controls** and use dedicated database users with minimal required privileges
+4. **Monitor query execution** and implement query logging for audit trails
+5. **Use connection pooling limits** to prevent resource exhaustion
+6. **Regularly rotate database credentials** and update environment variables accordingly
 
 ## Troubleshooting
 

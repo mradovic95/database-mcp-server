@@ -324,6 +324,7 @@ The Database MCP Server follows a configuration-first, connect-on-demand approac
 - **No Auto-Connect**: Configuration is loaded at startup but connections are NOT established automatically
 - **On-Demand Connection**: Use `connect_database` tool to establish connections as needed
 - **Multiple Sources**: Configuration loaded from multiple file paths and environment variables
+- **Multiple Database Support**: Configure multiple databases using environment variable patterns
 - **Validation**: Configuration validation before connection attempts
 - **Transparency**: Clear configuration loading order and precedence
 
@@ -334,16 +335,78 @@ The Database MCP Server follows a configuration-first, connect-on-demand approac
    ↓
 2. Load Config Files (database-config.json, config.json, or DATABASE_CONFIG_PATH)
    ↓
-3. Load Environment Variables (DB_HOST, DB_PORT, DB_TYPE, etc.)
+3. Load Single Database Environment Variables (DB_HOST, DB_PORT, DB_TYPE, etc.)
    ↓
-4. Display Configuration Status
+4. Load Multiple Database Environment Variables ({CONNECTION_NAME}_DB_{PARAMETER})
    ↓
-5. Server Ready (no connections established)
+5. Display Configuration Status
    ↓
-6. AI Uses connect_database Tool
+6. Server Ready (no connections established)
    ↓
-7. Connection Established On-Demand
+7. AI Uses connect_database Tool
+   ↓
+8. Connection Established On-Demand
 ```
+
+### Environment Variable Patterns
+
+#### Single Database Configuration (Legacy)
+```bash
+export DB_TYPE=postgresql
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=my_database
+export DB_USER=db_user
+export DB_PASSWORD=db_password
+```
+
+#### Multiple Database Configuration (Recommended)
+Use the pattern `{CONNECTION_NAME}_DB_{PARAMETER}` to configure multiple databases:
+
+```bash
+# Production Database
+export PROD_DB_TYPE=postgresql
+export PROD_DB_HOST=prod-db.company.com
+export PROD_DB_PORT=5432
+export PROD_DB_NAME=production_db
+export PROD_DB_USER=prod_user
+export PROD_DB_PASSWORD=prod_password
+export PROD_DB_SSL=true
+export PROD_DB_MAX_CONNECTIONS=20
+
+# Development Database
+export DEV_DB_TYPE=mysql
+export DEV_DB_HOST=localhost
+export DEV_DB_PORT=3306
+export DEV_DB_NAME=dev_db
+export DEV_DB_USER=dev_user
+export DEV_DB_PASSWORD=dev_password
+export DEV_DB_SSL=false
+
+# Analytics Database
+export ANALYTICS_DB_TYPE=postgresql
+export ANALYTICS_DB_HOST=analytics.company.com
+export ANALYTICS_DB_PORT=5432
+export ANALYTICS_DB_NAME=analytics_db
+export ANALYTICS_DB_USER=analytics_user
+export ANALYTICS_DB_PASSWORD=analytics_password
+export ANALYTICS_DB_MAX_CONNECTIONS=10
+export ANALYTICS_DB_IDLE_TIMEOUT=30000
+export ANALYTICS_DB_CONNECTION_TIMEOUT=15000
+export ANALYTICS_DB_ACQUIRE_TIMEOUT=20000
+```
+
+**Environment Variable Pattern Rules:**
+- `{CONNECTION_NAME}` must be uppercase letters, numbers, and underscores
+- `{CONNECTION_NAME}` becomes the connection name (converted to lowercase)
+- Supported parameters: TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, MAX_CONNECTIONS, IDLE_TIMEOUT, CONNECTION_TIMEOUT, ACQUIRE_TIMEOUT
+- Invalid patterns are ignored (e.g., `prod_DB_TYPE`, `DB_PROD_TYPE`, `INVALID_PROD_TYPE`)
+
+**Security Benefits:**
+- Keep sensitive credentials in environment variables
+- Support multiple databases without configuration files
+- Environment-based configuration management
+- No credentials stored in version control
 
 ### Configuration Benefits
 
