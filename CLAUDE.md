@@ -217,6 +217,39 @@ Tools are defined declaratively separate from implementation:
 ```javascript
 export const TOOLS = [
 	{
+		name: "connect_database",
+		description: "Connect to a database with the specified configuration",
+		inputSchema: {
+			type: "object",
+			properties: {
+				type: {type: "string", description: "Database type (postgresql, mysql)"},
+				name: {type: "string", description: "Connection name (optional)"},
+				host: {type: "string", description: "Database host"},
+				database: {type: "string", description: "Database name"},
+				user: {type: "string", description: "Database user"},
+				password: {type: "string", description: "Database password"},
+				port: {type: "number", description: "Database port (optional)"},
+				ssl: {type: "boolean", description: "Use SSL connection (optional)"},
+				maxConnections: {type: "number", description: "Maximum connections in pool (optional)"},
+				idleTimeout: {type: "number", description: "Idle connection timeout in milliseconds (optional)"},
+				connectionTimeout: {type: "number", description: "Connection timeout in milliseconds (optional)"},
+				acquireTimeout: {type: "number", description: "Connection acquire timeout in milliseconds (optional)"}
+			},
+			required: ["type", "host", "database", "user", "password"]
+		}
+	},
+	{
+		name: "connect_from_config",
+		description: "Connect to a database using a named configuration from config file",
+		inputSchema: {
+			type: "object",
+			properties: {
+				configName: {type: "string", description: "Name of the connection configuration"},
+				connectionName: {type: "string", description: "Custom name for this connection (optional)"}
+			}
+		}
+	},
+	{
 		name: "execute_query",
 		description: "Execute a SQL query on a connected database",
 		inputSchema: {
@@ -227,6 +260,56 @@ export const TOOLS = [
 				params: {type: "array", description: "Query parameters"}
 			},
 			required: ["connection", "sql"]
+		}
+	},
+	{
+		name: "list_connections",
+		description: "List all active database connections"
+	},
+	{
+		name: "test_connection",
+		description: "Test the connectivity of a database connection",
+		inputSchema: {
+			type: "object",
+			properties: {
+				connection: {type: "string", description: "Connection name"}
+			},
+			required: ["connection"]
+		}
+	},
+	{
+		name: "close_connection",
+		description: "Close a database connection",
+		inputSchema: {
+			type: "object",
+			properties: {
+				connection: {type: "string", description: "Connection name"}
+			},
+			required: ["connection"]
+		}
+	},
+	{
+		name: "connection_info",
+		description: "Get detailed information about a specific connection"
+	},
+	{
+		name: "show_configurations",
+		description: "Show all database configurations available in the config file"
+	},
+	{
+		name: "export_connections",
+		description: "Export connection configurations for backup or migration"
+	},
+	{
+		name: "import_connections",
+		description: "Import connection configurations from backup",
+		inputSchema: {
+			type: "object",
+			properties: {
+				connections: {type: "object", description: "Connection configurations to import"},
+				overwrite: {type: "boolean", description: "Whether to overwrite existing connections"}
+			},
+			required: ["connections"]
 		}
 	}
 ]
@@ -241,6 +324,7 @@ The Database MCP Server follows a configuration-first, connect-on-demand approac
 - **No Auto-Connect**: Configuration is loaded at startup but connections are NOT established automatically
 - **On-Demand Connection**: Use `connect_database` tool to establish connections as needed
 - **Multiple Sources**: Configuration loaded from multiple file paths and environment variables
+- **Multiple Database Support**: Configure multiple databases using environment variable patterns
 - **Validation**: Configuration validation before connection attempts
 - **Transparency**: Clear configuration loading order and precedence
 
@@ -251,16 +335,78 @@ The Database MCP Server follows a configuration-first, connect-on-demand approac
    ↓
 2. Load Config Files (database-config.json, config.json, or DATABASE_CONFIG_PATH)
    ↓
-3. Load Environment Variables (DB_HOST, DB_PORT, DB_TYPE, etc.)
+3. Load Single Database Environment Variables (DB_HOST, DB_PORT, DB_TYPE, etc.)
    ↓
-4. Display Configuration Status
+4. Load Multiple Database Environment Variables ({CONNECTION_NAME}_DB_{PARAMETER})
    ↓
-5. Server Ready (no connections established)
+5. Display Configuration Status
    ↓
-6. AI Uses connect_database Tool
+6. Server Ready (no connections established)
    ↓
-7. Connection Established On-Demand
+7. AI Uses connect_database Tool
+   ↓
+8. Connection Established On-Demand
 ```
+
+### Environment Variable Patterns
+
+#### Single Database Configuration (Legacy)
+```bash
+export DB_TYPE=postgresql
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=my_database
+export DB_USER=db_user
+export DB_PASSWORD=db_password
+```
+
+#### Multiple Database Configuration (Recommended)
+Use the pattern `{CONNECTION_NAME}_DB_{PARAMETER}` to configure multiple databases:
+
+```bash
+# Production Database
+export PROD_DB_TYPE=postgresql
+export PROD_DB_HOST=prod-db.company.com
+export PROD_DB_PORT=5432
+export PROD_DB_NAME=production_db
+export PROD_DB_USER=prod_user
+export PROD_DB_PASSWORD=prod_password
+export PROD_DB_SSL=true
+export PROD_DB_MAX_CONNECTIONS=20
+
+# Development Database
+export DEV_DB_TYPE=mysql
+export DEV_DB_HOST=localhost
+export DEV_DB_PORT=3306
+export DEV_DB_NAME=dev_db
+export DEV_DB_USER=dev_user
+export DEV_DB_PASSWORD=dev_password
+export DEV_DB_SSL=false
+
+# Analytics Database
+export ANALYTICS_DB_TYPE=postgresql
+export ANALYTICS_DB_HOST=analytics.company.com
+export ANALYTICS_DB_PORT=5432
+export ANALYTICS_DB_NAME=analytics_db
+export ANALYTICS_DB_USER=analytics_user
+export ANALYTICS_DB_PASSWORD=analytics_password
+export ANALYTICS_DB_MAX_CONNECTIONS=10
+export ANALYTICS_DB_IDLE_TIMEOUT=30000
+export ANALYTICS_DB_CONNECTION_TIMEOUT=15000
+export ANALYTICS_DB_ACQUIRE_TIMEOUT=20000
+```
+
+**Environment Variable Pattern Rules:**
+- `{CONNECTION_NAME}` must be uppercase letters, numbers, and underscores
+- `{CONNECTION_NAME}` becomes the connection name (converted to lowercase)
+- Supported parameters: TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, MAX_CONNECTIONS, IDLE_TIMEOUT, CONNECTION_TIMEOUT, ACQUIRE_TIMEOUT
+- Invalid patterns are ignored (e.g., `prod_DB_TYPE`, `DB_PROD_TYPE`, `INVALID_PROD_TYPE`)
+
+**Security Benefits:**
+- Keep sensitive credentials in environment variables
+- Support multiple databases without configuration files
+- Environment-based configuration management
+- No credentials stored in version control
 
 ### Configuration Benefits
 
@@ -432,11 +578,9 @@ test/
 ├── integration/           # Primary focus - Real database testing
 │   ├── setup/database-config.js  # Test database configurations
 │   └── database/         # DatabaseManager with real databases
-│       ├── postgresql.test.js    # PostgreSQL-specific tests
-│       ├── mysql.test.js         # MySQL-specific tests
-│       └── database-manager.test.js # Cross-database tests
-└── unit/                 # Future - Fast feedback for pure logic
-    └── utils/            # Only for non-database utilities
+│       ├── database-manager-postgresql.test.js    # PostgreSQL-specific tests
+│       └── database-manager-mysql.test.js         # MySQL-specific tests
+└── drivers/              # Future - Driver-specific unit tests
 ```
 
 ### Integration Testing Rules
@@ -530,7 +674,6 @@ docker-compose -f docker-compose.test.yml down
 **Development Testing:**
 
 ```bash
-npm run test:unit  # Future - pure logic tests
 npm test           # All tests (currently runs vitest)
 ```
 
@@ -541,9 +684,8 @@ npm test           # All tests (currently runs vitest)
 **File Naming Convention**:
 
 ```
-test/integration/database/[database-type].test.js     # Database-specific tests
-test/integration/database/database-manager.test.js    # Cross-database tests
-test/unit/utils/[utility-name].test.js               # Future - pure utilities
+test/integration/database/database-manager-postgresql.test.js     # PostgreSQL-specific tests
+test/integration/database/database-manager-mysql.test.js        # MySQL-specific tests
 ```
 
 #### **Test Suite Structure**
@@ -649,7 +791,7 @@ it('should execute parameterized query with MySQL syntax', async () => {
 })
 ```
 
-**Cross-Database Tests (`database-manager.test.js`)**:
+**Database-Specific Tests**:
 ```javascript
 it('should handle multiple concurrent connections across database types', async () => {
   // GIVEN - PostgreSQL and MySQL configurations

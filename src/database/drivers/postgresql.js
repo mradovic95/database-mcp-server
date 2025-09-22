@@ -18,9 +18,10 @@ export class PostgreSQLDriver extends BaseDriver {
       database: this.config.database,
       user: this.config.user,
       password: this.config.password,
-      max: this.config.maxConnections || 10,
-      idleTimeoutMillis: this.config.idleTimeout || 30000,
+      max: this.config.maxConnections || 5,
+      idleTimeoutMillis: this.config.idleTimeout || 60000,
       connectionTimeoutMillis: this.config.connectionTimeout || 5000,
+      acquireTimeoutMillis: this.config.acquireTimeout || 5000,
       ssl: this.config.ssl || false
     }
 

@@ -16,8 +16,8 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test'
     },
-    // Only run integration tests in test directory
-    include: ['test/integration/**/*.test.js'],
+    // Run all tests in test directory
+    include: ['test/**/*.test.js'],
     // Reporter configuration
     reporter: ['verbose'],
     // Coverage configuration

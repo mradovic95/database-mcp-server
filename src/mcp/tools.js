@@ -41,6 +41,18 @@ export const TOOLS = [
         maxConnections: {
           type: "number",
           description: "Maximum number of connections in pool (optional)"
+        },
+        idleTimeout: {
+          type: "number",
+          description: "Idle connection timeout in milliseconds (optional)"
+        },
+        connectionTimeout: {
+          type: "number",
+          description: "Connection timeout in milliseconds (optional)"
+        },
+        acquireTimeout: {
+          type: "number",
+          description: "Connection acquire timeout in milliseconds (optional)"
         }
       },
       required: ["type", "host", "database", "user", "password"]

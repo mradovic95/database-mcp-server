@@ -1,6 +1,8 @@
 # Database MCP Server
 
-A Model Context Protocol (MCP) server that provides AI systems with seamless integration to database systems using connection pooling and query execution. This server exposes database operations as MCP tools, enabling AI assistants to interact with databases programmatically.
+A Model Context Protocol (MCP) server that provides AI systems with seamless integration to database systems using
+connection pooling and query execution. This server exposes database operations as MCP tools, enabling AI assistants to
+interact with databases programmatically.
 
 ## Features
 
@@ -24,7 +26,8 @@ With this MCP server, you can ask your AI assistant natural language questions a
 
 - *"Show me all tables in the database"* → Get comprehensive table and column information
 - *"What's the structure of the users table?"* → View table schema, columns, and relationships
-- *"Which tables have foreign key relationships?"* → Discover database relationships
+- *"Give me all tables connected to the product table"* → Discover database relationships
+- *"Show me all user roles and privileges for this database"* → Database security and access control analysis
 
 **🔍 Data Analysis & Queries**
 
@@ -54,137 +57,339 @@ With this MCP server, you can ask your AI assistant natural language questions a
 - *"Backup my current database setup before making changes"* → Create configuration snapshot
 - *"Copy connection settings from development to my local environment"* → Clone environment configurations
 
-## Installation
+### Currently Supported Databases
 
-### Via NPX (Recommended)
+- **PostgreSQL**
+- **MySQL**
+
+## Getting Started
+
+### Installation
+
+#### Via NPX (Recommended)
+
+Run directly without installation:
+
 ```bash
 npx @mihailoradovi/database-mcp-server
 ```
 
-### Via npm
+#### Via npm
+
 ```bash
 npm install -g @mihailoradovi/database-mcp-server
 database-mcp-server
 ```
 
-## Supported Databases
+### Claude Integration
 
-- **PostgreSQL** (`postgresql`, `postgres`, `pg`)
-- **MySQL** (`mysql`, `mysql2`)
+#### Claude Desktop Configuration
 
-## Architecture & Project Structure
+Add the Database MCP server to your Claude Desktop by editing the MCP configuration file:
 
-### Clean Layered Architecture
+**macOS/Linux:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
-The Database MCP Server follows clean layered architecture principles with extensible driver patterns:
+##### Option 1: Environment Variables (Recommended for Security)
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Claude/AI     │────│   MCP Protocol  │────│  Database MCP   │
-│   Assistant     │    │   (JSON-RPC)    │    │     Server      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                                       │
-                                              ┌────────┴────────┐
-                                              │   MCP Handler   │
-                                              │   Coordinator   │
-                                              └────────┬────────┘
-                                                       │
-                                              ┌────────┴────────┐
-                                              │ Database        │
-                                              │ Manager         │
-                                              └────────┬────────┘
-                                                       │
-                                    ┌─────────────────┼─────────────────┐
-                                    │                 │                 │
-                              ┌─────┴─────┐  ┌────────┴────────┐ ┌─────┴─────┐
-                              │PostgreSQL │  │     MySQL       │ │  Future   │
-                              │  Driver   │  │    Driver       │ │  Drivers  │
-                              └─────┬─────┘  └────────┬────────┘ └─────┬─────┘
-                                    │                 │                 │
-                              ┌─────┴─────┐  ┌────────┴────────┐ ┌─────┴─────┐
-                              │PostgreSQL │  │     MySQL       │ │   Other   │
-                              │Connection │  │   Connection    │ │ Databases │
-                              │   Pool    │  │     Pool        │ │           │
-                              └───────────┘  └─────────────────┘ └───────────┘
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"DB_HOST": "localhost",
+				"DB_PORT": "5432",
+				"DB_TYPE": "postgresql",
+				"DB_NAME": "myapp_db",
+				"DB_USER": "username",
+				"DB_PASSWORD": "password"
+			}
+		}
+	}
+}
 ```
 
-### Project Structure
+**🔒 Security Note**: Environment variables are more secure than configuration files since AI agents can potentially
+access the file system, but environment variables are isolated to the MCP server process.
 
+##### Option 1b: Multiple Databases via Environment Variables (Secure Multi-DB Setup)
+
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"PROD_DB_TYPE": "postgresql",
+				"PROD_DB_HOST": "prod-db.company.com",
+				"PROD_DB_PORT": "5432",
+				"PROD_DB_NAME": "production_db",
+				"PROD_DB_USER": "prod_user",
+				"PROD_DB_PASSWORD": "prod_password",
+				"PROD_DB_SSL": "true",
+				"DEV_DB_TYPE": "mysql",
+				"DEV_DB_HOST": "localhost",
+				"DEV_DB_PORT": "3306",
+				"DEV_DB_NAME": "development_db",
+				"DEV_DB_USER": "dev_user",
+				"DEV_DB_PASSWORD": "dev_password",
+				"STAGING_DB_TYPE": "postgresql",
+				"STAGING_DB_HOST": "staging-db.company.com",
+				"STAGING_DB_PORT": "5432",
+				"STAGING_DB_NAME": "staging_db",
+				"STAGING_DB_USER": "staging_user",
+				"STAGING_DB_PASSWORD": "staging_password"
+			}
+		}
+	}
+}
 ```
-database-mcp-server/
-├── 📁 bin/
-│   └── cli.js                     # Command-line interface entry point
-├── 📁 src/
-│   ├── 📁 database/               # Database layer
-│   │   ├── manager.js             # Connection pool manager
-│   │   └── 📁 drivers/            # Database-specific implementations
-│   │       ├── base.js            # Abstract base driver
-│   │       ├── postgresql.js      # PostgreSQL driver
-│   │       ├── mysql.js           # MySQL driver
-│   │       └── index.js           # Driver factory and registry
-│   ├── 📁 mcp/                    # MCP protocol layer
-│   │   ├── tools.js               # MCP tool definitions
-│   │   └── handlers.js            # Tool implementation handlers
-│   ├── 📁 utils/                  # Shared utilities
-│   │   ├── logger.js              # Structured logging
-│   │   └── config.js              # Configuration management
-│   └── server.js                  # MCP server entry point
-├── 📁 examples/                   # Usage examples
-├── 📁 test/                       # Test suite
-├── package.json                   # Project metadata and dependencies
-├── CLAUDE.md                      # Development documentation
-└── README.md                      # User documentation
+
+**Environment Variable Pattern**: Use `{CONNECTION_NAME}_DB_{PARAMETER}` format where:
+
+- `{CONNECTION_NAME}` is the unique identifier for your database (e.g., PROD, DEV, STAGING)
+- `{PARAMETER}` is the database parameter (TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, etc.)
+
+**🔒 Security Benefit**: This approach keeps all sensitive credentials in environment variables while supporting multiple
+databases without configuration files.
+
+##### Option 2: Configuration File (Multiple Databases)
+
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"DATABASE_CONFIG_PATH": "/path/to/your/database-config.json"
+			}
+		}
+	}
+}
 ```
 
-### Architecture Benefits
+#### Claude Code Configuration
 
-- **🏗️ Clean Separation**: Infrastructure, business logic, and coordination layers
-- **🔄 Strategy Pattern**: Database drivers implement common interface with specific implementations
-- **🎯 Single Responsibility**: Each component has a focused, well-defined purpose
-- **🧪 Testable Design**: Clean abstractions enable comprehensive testing
-- **📈 Scalable**: Easy to extend with new database drivers and operations
-- **🛡️ Reliable**: Connection pooling and health monitoring for production use
+Add to your `.mcp.json` file in your project root:
 
-## Usage
+##### Option 1: Environment Variables (Recommended for Security)
 
-### Starting the Server
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"DB_HOST": "localhost",
+				"DB_PORT": "5432",
+				"DB_TYPE": "postgresql",
+				"DB_NAME": "myapp_db",
+				"DB_USER": "username",
+				"DB_PASSWORD": "password"
+			}
+		}
+	}
+}
+```
+
+**🔒 Security Note**: Environment variables are more secure than configuration files since AI agents can potentially
+access the file system, but environment variables are isolated to the MCP server process.
+
+##### Option 1b: Multiple Databases via Environment Variables (Secure Multi-DB Setup)
+
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"PROD_DB_TYPE": "postgresql",
+				"PROD_DB_HOST": "prod-db.company.com",
+				"PROD_DB_PORT": "5432",
+				"PROD_DB_NAME": "production_db",
+				"PROD_DB_USER": "prod_user",
+				"PROD_DB_PASSWORD": "prod_password",
+				"PROD_DB_SSL": "true",
+				"DEV_DB_TYPE": "mysql",
+				"DEV_DB_HOST": "localhost",
+				"DEV_DB_PORT": "3306",
+				"DEV_DB_NAME": "development_db",
+				"DEV_DB_USER": "dev_user",
+				"DEV_DB_PASSWORD": "dev_password",
+				"ANALYTICS_DB_TYPE": "postgresql",
+				"ANALYTICS_DB_HOST": "analytics-db.company.com",
+				"ANALYTICS_DB_PORT": "5432",
+				"ANALYTICS_DB_NAME": "analytics_db",
+				"ANALYTICS_DB_USER": "analytics_user",
+				"ANALYTICS_DB_PASSWORD": "analytics_password"
+			}
+		}
+	}
+}
+```
+
+**Environment Variable Pattern**: Use `{CONNECTION_NAME}_DB_{PARAMETER}` format where:
+
+- `{CONNECTION_NAME}` is the unique identifier for your database (e.g., PROD, DEV, ANALYTICS)
+- `{PARAMETER}` is the database parameter (TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, etc.)
+
+**🔒 Security Benefit**: This approach keeps all sensitive credentials in environment variables while supporting multiple
+databases without configuration files.
+
+##### Option 2: Configuration File (Multiple Databases)
+
+```json
+{
+	"mcpServers": {
+		"database": {
+			"command": "npx",
+			"args": [
+				"@mihailoradovi/database-mcp-server"
+			],
+			"env": {
+				"DATABASE_CONFIG_PATH": "./database-config.json"
+			}
+		}
+	}
+}
+```
+
+**For both options above, when using a configuration file, create a `database-config.json` file:**
+
+```json
+{
+	"development": {
+		"type": "postgresql",
+		"host": "localhost",
+		"port": 5432,
+		"database": "dev_db",
+		"user": "dev_user",
+		"password": "dev_pass"
+	},
+	"staging": {
+		"type": "mysql",
+		"host": "staging-db.company.com",
+		"port": 3306,
+		"database": "staging_db",
+		"user": "stage_user",
+		"password": "stage_pass"
+	}
+}
+```
+
+After configuration, restart Claude Desktop or reload Claude Code to enable database management capabilities.
+
+### Usage
+
+#### Starting the Server
 
 ```bash
-# Start with default settings
+# Start with default settings (MCP mode - silent)
 npx @mihailoradovi/database-mcp-server
 
-# Start with debug logging
-LOG_LEVEL=DEBUG npx @mihailoradovi/database-mcp-server
+# Start in standalone mode with console logging
+npx @mihailoradovi/database-mcp-server --standalone
 
-# Set log level via command line
-npx @mihailoradovi/database-mcp-server --log-level DEBUG
+# Start standalone with debug logging
+npx @mihailoradovi/database-mcp-server --standalone --log-level DEBUG
 ```
-
-### Environment Variables
-
-- `LOG_LEVEL`: Set logging level (DEBUG, INFO, WARN, ERROR)
-- `DATABASE_CONFIG_PATH`: Path to database configuration file
-- `DB_HOST`: Default database host
-- `DB_PORT`: Default database port
-- `DB_NAME`: Default database name
-- `DB_USER`: Default database user
-- `DB_PASSWORD`: Default database password
-- `DB_TYPE`: Default database type
 
 ## Configuration
 
+### Connection Parameters
+
+- `type` (required): Database type (`postgresql`, `mysql`)
+- `host` (required): Database hostname or IP address
+- `database` (required): Database name
+- `user` (required): Database user
+- `password` (required): Database password
+- `port` (optional): Database port (uses default for database type)
+- `ssl` (optional): Enable SSL/TLS connection (default: false)
+- `maxConnections` (optional): Maximum connections in pool (default: 5)
+- `idleTimeout` (optional): Idle connection timeout in milliseconds (default: 60000)
+- `connectionTimeout` (optional): Connection timeout in milliseconds (default: 5000)
+- `acquireTimeout` (optional): Connection acquire timeout in milliseconds (default: 5000)
+
 ### Environment Variables
 
-| Variable                | Description                         | Default       |
-|-------------------------|-------------------------------------|---------------|
-| `LOG_LEVEL`            | Set logging level                   | `INFO`        |
-| `DATABASE_CONFIG_PATH` | Path to database configuration file | Auto-detected |
-| `DB_HOST`              | Default database hostname           | `localhost`   |
+#### Standard Environment Variables
+
+| Variable               | Description                         | Default           |
+|------------------------|-------------------------------------|-------------------|
+| `LOG_LEVEL`            | Set logging level                   | `INFO`            |
+| `DATABASE_CONFIG_PATH` | Path to database configuration file | Auto-detected     |
+| `DB_HOST`              | Default database hostname           | `localhost`       |
 | `DB_PORT`              | Default database port               | Database-specific |
-| `DB_NAME`              | Default database name               | `""`          |
-| `DB_USER`              | Default database user               | `""`          |
-| `DB_PASSWORD`          | Default database password           | `""`          |
-| `DB_TYPE`              | Default database type               | `postgresql`  |
+| `DB_NAME`              | Default database name               | `""`              |
+| `DB_USER`              | Default database user               | `""`              |
+| `DB_PASSWORD`          | Default database password           | `""`              |
+| `DB_TYPE`              | Default database type               | `postgresql`      |
+
+#### Multiple Database Environment Variables
+
+For multiple database connections, use the pattern `{CONNECTION_NAME}_DB_{PARAMETER}`:
+
+| Variable Pattern               | Description                             | Example                           |
+|--------------------------------|-----------------------------------------|-----------------------------------|
+| `{NAME}_DB_TYPE`               | Database type for named connection      | `PROD_DB_TYPE=postgresql`         |
+| `{NAME}_DB_HOST`               | Database hostname for named connection  | `PROD_DB_HOST=prod-db.com`        |
+| `{NAME}_DB_PORT`               | Database port for named connection      | `PROD_DB_PORT=5432`               |
+| `{NAME}_DB_NAME`               | Database name for named connection      | `PROD_DB_NAME=production`         |
+| `{NAME}_DB_USER`               | Database user for named connection      | `PROD_DB_USER=prod_user`          |
+| `{NAME}_DB_PASSWORD`           | Database password for named connection  | `PROD_DB_PASSWORD=secret`         |
+| `{NAME}_DB_SSL`                | Enable SSL for named connection         | `PROD_DB_SSL=true`                |
+| `{NAME}_DB_MAX_CONNECTIONS`    | Max connections for named connection    | `PROD_DB_MAX_CONNECTIONS=10`      |
+| `{NAME}_DB_IDLE_TIMEOUT`       | Idle timeout for named connection       | `PROD_DB_IDLE_TIMEOUT=60000`      |
+| `{NAME}_DB_CONNECTION_TIMEOUT` | Connection timeout for named connection | `PROD_DB_CONNECTION_TIMEOUT=5000` |
+| `{NAME}_DB_ACQUIRE_TIMEOUT`    | Acquire timeout for named connection    | `PROD_DB_ACQUIRE_TIMEOUT=5000`    |
+
+**Examples:**
+
+```bash
+# Production PostgreSQL database
+export PROD_DB_TYPE=postgresql
+export PROD_DB_HOST=prod-db.company.com
+export PROD_DB_PORT=5432
+export PROD_DB_NAME=production_db
+export PROD_DB_USER=prod_user
+export PROD_DB_PASSWORD=prod_password
+export PROD_DB_SSL=true
+
+# Development MySQL database
+export DEV_DB_TYPE=mysql
+export DEV_DB_HOST=localhost
+export DEV_DB_PORT=3306
+export DEV_DB_NAME=dev_db
+export DEV_DB_USER=dev_user
+export DEV_DB_PASSWORD=dev_password
+
+# Analytics PostgreSQL database
+export ANALYTICS_DB_TYPE=postgresql
+export ANALYTICS_DB_HOST=analytics-db.company.com
+export ANALYTICS_DB_PORT=5432
+export ANALYTICS_DB_NAME=analytics_db
+export ANALYTICS_DB_USER=analytics_user
+export ANALYTICS_DB_PASSWORD=analytics_password
+```
+
+**🔒 Security Advantage**: This pattern allows you to configure multiple databases securely using only environment
+variables, avoiding the need for configuration files that AI agents might access.
 
 ### Configuration File Format
 
@@ -192,22 +397,26 @@ The configuration file supports multiple database connections:
 
 ```json
 {
-  "connection_name": {
-    "type": "postgresql",
-    "host": "database-host",
-    "port": 5432,
-    "database": "database_name",
-    "user": "username",
-    "password": "password",
-    "ssl": false,
-    "maxConnections": 10
-  }
+	"connection_name": {
+		"type": "postgresql",
+		"host": "database-host",
+		"port": 5432,
+		"database": "database_name",
+		"user": "username",
+		"password": "password",
+		"ssl": false,
+		"maxConnections": 5,
+		"idleTimeout": 60000,
+		"connectionTimeout": 5000,
+		"acquireTimeout": 5000
+	}
 }
 ```
 
 ### Configuration Loading Behavior
 
-Configuration is loaded automatically in **priority order** - the system uses the **first existing file** and stops looking:
+Configuration is loaded automatically in **priority order** - the system uses the **first existing file** and stops
+looking:
 
 1. `./database-config.json` (highest priority)
 2. `./config.json`
@@ -225,6 +434,7 @@ Environment variables work differently from configuration files:
 ### Configuration Examples
 
 #### Example 1: File Priority
+
 ```bash
 # If both files exist:
 ./database-config.json  ← This file is loaded
@@ -232,22 +442,25 @@ Environment variables work differently from configuration files:
 ```
 
 #### Example 2: Environment Variables + File
+
 **File: `database-config.json`**
+
 ```json
 {
-  "production": {
-    "type": "postgresql",
-    "host": "prod-db.com",
-    "port": 5432,
-    "database": "prod_db",
-    "user": "prod_user",
-    "password": "prod_pass",
-    "ssl": true
-  }
+	"production": {
+		"type": "postgresql",
+		"host": "prod-db.com",
+		"port": 5432,
+		"database": "prod_db",
+		"user": "prod_user",
+		"password": "prod_pass",
+		"ssl": true
+	}
 }
 ```
 
 **Environment Variables:**
+
 ```bash
 export DB_HOST=localhost
 export DB_USER=dev_user
@@ -256,127 +469,9 @@ export DB_NAME=dev_db
 ```
 
 **Result:** Two connections available:
+
 - `production` (from file)
 - `default` (from environment variables)
-
-### Connection Parameters
-
-- `type` (required): Database type (`postgresql`, `mysql`)
-- `host` (required): Database hostname or IP address
-- `database` (required): Database name
-- `user` (required): Database user
-- `password` (required): Database password
-- `port` (optional): Database port (uses default for database type)
-- `ssl` (optional): Enable SSL/TLS connection (default: false)
-- `maxConnections` (optional): Maximum connections in pool (default: 10)
-
-## Claude Integration
-
-### Claude Desktop Configuration
-
-Add the Database MCP server to your Claude Desktop by editing the MCP configuration file:
-
-**macOS/Linux:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
-
-#### Option 1: Environment Variables (Simple)
-```json
-{
-  "mcpServers": {
-    "database": {
-      "command": "npx",
-      "args": ["@mihailoradovi/database-mcp-server"],
-      "env": {
-        "DB_HOST": "localhost",
-        "DB_PORT": "5432",
-        "DB_NAME": "myapp",
-        "DB_USER": "username",
-        "DB_PASSWORD": "password",
-        "DB_TYPE": "postgresql"
-      }
-    }
-  }
-}
-```
-
-#### Option 2: Configuration File (Multiple Databases)
-```json
-{
-  "mcpServers": {
-    "database": {
-      "command": "npx",
-      "args": ["@mihailoradovi/database-mcp-server"],
-      "env": {
-        "DATABASE_CONFIG_PATH": "/path/to/your/database-config.json"
-      }
-    }
-  }
-}
-```
-
-### Claude Code Configuration
-
-Add to your `.mcp.json` file in your project root:
-
-#### Option 1: Environment Variables (Simple)
-```json
-{
-  "mcpServers": {
-    "database": {
-      "command": "npx",
-      "args": ["@mihailoradovi/database-mcp-server"],
-      "env": {
-        "DB_HOST": "localhost",
-        "DB_PORT": "5432",
-        "DB_NAME": "myapp",
-        "DB_USER": "username",
-        "DB_PASSWORD": "password"
-      }
-    }
-  }
-}
-```
-
-#### Option 2: Configuration File (Multiple Databases)
-```json
-{
-  "mcpServers": {
-    "database": {
-      "command": "npx",
-      "args": ["@mihailoradovi/database-mcp-server"],
-      "env": {
-        "DATABASE_CONFIG_PATH": "./database-config.json"
-      }
-    }
-  }
-}
-```
-
-**For both options above, when using a configuration file, create a `database-config.json` file:**
-
-```json
-{
-  "development": {
-    "type": "postgresql",
-    "host": "localhost",
-    "port": 5432,
-    "database": "dev_db",
-    "user": "dev_user",
-    "password": "dev_pass"
-  },
-  "staging": {
-    "type": "mysql",
-    "host": "staging-db.company.com",
-    "port": 3306,
-    "database": "stage_db",
-    "user": "stage_user",
-    "password": "stage_pass",
-    "ssl": true
-  }
-}
-```
-
-After configuration, restart Claude Desktop or reload Claude Code to enable database management capabilities.
 
 ## MCP Tools
 
@@ -390,22 +485,26 @@ Connect to a database with specified configuration.
 
 ```json
 {
-  "name": "connect_database",
-  "arguments": {
-    "type": "postgresql",
-    "name": "myapp",
-    "host": "localhost",
-    "port": 5432,
-    "database": "myapp_db",
-    "user": "username",
-    "password": "password",
-    "ssl": false,
-    "maxConnections": 10
-  }
+	"name": "connect_database",
+	"arguments": {
+		"type": "postgresql",
+		"name": "myapp",
+		"host": "localhost",
+		"port": 5432,
+		"database": "myapp_db",
+		"user": "username",
+		"password": "password",
+		"ssl": false,
+		"maxConnections": 5,
+		"idleTimeout": 60000,
+		"connectionTimeout": 5000,
+		"acquireTimeout": 5000
+	}
 }
 ```
 
 **Parameters:**
+
 - `type` (required): Database type (`postgresql`, `postgres`, `pg`, `mysql`, `mysql2`)
 - `host` (required): Database hostname or IP address
 - `database` (required): Database name
@@ -414,7 +513,10 @@ Connect to a database with specified configuration.
 - `name` (optional): Connection name (auto-generated if not provided)
 - `port` (optional): Database port (uses default for database type)
 - `ssl` (optional): Use SSL connection (default: false)
-- `maxConnections` (optional): Maximum connections in pool (default: 10)
+- `maxConnections` (optional): Maximum connections in pool (default: 5)
+- `idleTimeout` (optional): Idle connection timeout in milliseconds (default: 60000)
+- `connectionTimeout` (optional): Connection timeout in milliseconds (default: 5000)
+- `acquireTimeout` (optional): Connection acquire timeout in milliseconds (default: 5000)
 
 #### `connect_from_config`
 
@@ -422,15 +524,16 @@ Connect to a database using a named configuration from config file.
 
 ```json
 {
-  "name": "connect_from_config",
-  "arguments": {
-    "configName": "production",
-    "connectionName": "prod-db"
-  }
+	"name": "connect_from_config",
+	"arguments": {
+		"configName": "production",
+		"connectionName": "prod-db"
+	}
 }
 ```
 
 **Parameters:**
+
 - `configName` (optional): Name of the connection configuration (defaults to "default")
 - `connectionName` (optional): Custom name for this connection (will use configName if not provided)
 
@@ -440,11 +543,12 @@ List all active database connections.
 
 ```json
 {
-  "name": "list_connections"
+	"name": "list_connections"
 }
 ```
 
 **Returns:**
+
 - Array of connection objects with name, type, host, database, and status
 
 #### `test_connection`
@@ -453,17 +557,19 @@ Test the connectivity of a database connection.
 
 ```json
 {
-  "name": "test_connection",
-  "arguments": {
-    "connection": "myapp"
-  }
+	"name": "test_connection",
+	"arguments": {
+		"connection": "myapp"
+	}
 }
 ```
 
 **Parameters:**
+
 - `connection` (required): Connection name
 
 **Returns:**
+
 - Connection test result with success status and message
 
 #### `close_connection`
@@ -472,14 +578,15 @@ Close a database connection.
 
 ```json
 {
-  "name": "close_connection",
-  "arguments": {
-    "connection": "myapp"
-  }
+	"name": "close_connection",
+	"arguments": {
+		"connection": "myapp"
+	}
 }
 ```
 
 **Parameters:**
+
 - `connection` (required): Connection name
 
 #### `connection_info`
@@ -488,17 +595,19 @@ Get detailed information about a specific connection.
 
 ```json
 {
-  "name": "connection_info",
-  "arguments": {
-    "connection": "myapp"
-  }
+	"name": "connection_info",
+	"arguments": {
+		"connection": "myapp"
+	}
 }
 ```
 
 **Parameters:**
+
 - `connection` (required): Connection name
 
 **Returns:**
+
 - Connection details including name, type, host, database, user, and timestamps
 
 ### Query Operations
@@ -509,21 +618,26 @@ Execute a SQL query on a connected database.
 
 ```json
 {
-  "name": "execute_query",
-  "arguments": {
-    "connection": "myapp",
-    "sql": "SELECT * FROM users WHERE created_at > $1 LIMIT $2",
-    "params": ["2024-01-01", 10]
-  }
+	"name": "execute_query",
+	"arguments": {
+		"connection": "myapp",
+		"sql": "SELECT * FROM users WHERE created_at > $1 LIMIT $2",
+		"params": [
+			"2024-01-01",
+			10
+		]
+	}
 }
 ```
 
 **Parameters:**
+
 - `connection` (required): Connection name
 - `sql` (required): SQL query to execute
 - `params` (optional): Query parameters array for parameterized queries
 
 **Returns:**
+
 - Query results with data, row count, and execution metadata
 
 ### Configuration Management
@@ -534,11 +648,12 @@ Show all database configurations available in the config file that can be used w
 
 ```json
 {
-  "name": "show_configurations"
+	"name": "show_configurations"
 }
 ```
 
 **Returns:**
+
 - Object containing all available configurations with their details (excluding passwords)
 
 ### Backup and Migration
@@ -549,11 +664,12 @@ Export connection configurations for backup or migration.
 
 ```json
 {
-  "name": "export_connections"
+	"name": "export_connections"
 }
 ```
 
 **Returns:**
+
 - Object containing all active connection configurations with metadata (excluding passwords for security)
 
 #### `import_connections`
@@ -562,38 +678,41 @@ Import connection configurations from backup.
 
 ```json
 {
-  "name": "import_connections",
-  "arguments": {
-    "connections": {
-      "imported_db": {
-        "type": "postgresql",
-        "host": "new-server.example.com",
-        "port": 5432,
-        "database": "imported_db",
-        "user": "db_user",
-        "ssl": true
-      },
-      "another_db": {
-        "type": "mysql",
-        "host": "mysql.example.com",
-        "port": 3306,
-        "database": "app_db",
-        "user": "mysql_user"
-      }
-    },
-    "overwrite": false
-  }
+	"name": "import_connections",
+	"arguments": {
+		"connections": {
+			"imported_db": {
+				"type": "postgresql",
+				"host": "new-server.example.com",
+				"port": 5432,
+				"database": "imported_db",
+				"user": "db_user",
+				"ssl": true
+			},
+			"another_db": {
+				"type": "mysql",
+				"host": "mysql.example.com",
+				"port": 3306,
+				"database": "app_db",
+				"user": "mysql_user"
+			}
+		},
+		"overwrite": false
+	}
 }
 ```
 
 **Parameters:**
+
 - `connections` (required): Object containing connection configurations to import
 - `overwrite` (optional): Whether to overwrite existing connections with same name (default: false)
 
 **Returns:**
+
 - Import results with success/failure status for each connection and summary statistics
 
-**Note:** Imported configurations are validated but not automatically connected. You'll need to provide passwords when establishing connections using `connect_database` with the imported configuration details.
+**Note:** Imported configurations are validated but not automatically connected. You'll need to provide passwords when
+establishing connections using `connect_database` with the imported configuration details.
 
 ## Command Line Interface
 
@@ -629,87 +748,81 @@ npx @mihailoradovi/database-mcp-server test --type postgresql --host db.example.
 npx @mihailoradovi/database-mcp-server tools
 ```
 
-## Database Setup
+## Architecture & Project Structure
 
-### Quick PostgreSQL Setup with Docker
+### Clean Layered Architecture
 
-```bash
-# Run PostgreSQL with sample database
-docker run -d \
-  --name postgres \
-  -p 5432:5432 \
-  -e POSTGRES_USER=testuser \
-  -e POSTGRES_PASSWORD=testpass \
-  -e POSTGRES_DB=testdb \
-  postgres:latest
+The Database MCP Server follows clean layered architecture principles with extensible driver patterns:
 
-# Database available at localhost:5432
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Claude/AI     │────│   MCP Protocol  │────│  Database MCP   │
+│   Assistant     │    │   (JSON-RPC)    │    │     Server      │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                       │
+                                              ┌────────┴────────┐
+                                              │   MCP Handler   │
+                                              │   Coordinator   │
+                                              └────────┬────────┘
+                                                       │
+                                              ┌────────┴────────┐
+                                              │ Database        │
+                                              │ Manager         │
+                                              └────────┬────────┘
+                                                       │
+                                    ┌─────────────────-┼─────────────────┐
+                                    │                  │                 │
+                              ┌─────┴─────┐  ┌────────-┴────────┐ ┌─────-┴─────┐
+                              │PostgreSQL │  │     MySQL        │ │  Future    │
+                              │  Driver   │  │    Driver        │ │  Drivers   │
+                              └─────┬─────┘  └────────┬────────-┘ └─────┬─────-┘
+                                    │                 │                 │
+                              ┌─────┴─────┐  ┌────────┴────────┐ ┌─────-┴─────┐
+                              │PostgreSQL │  │     MySQL       │ │   Other    │
+                              │Connection │  │   Connection    │ │ Databases  │
+                              │   Pool    │  │     Pool        │ │            │
+                              └───────────┘  └─────────────────┘ └───────────-┘
 ```
 
-### Quick MySQL Setup with Docker
+### Project Structure
 
-```bash
-# Run MySQL with sample database
-docker run -d \
-  --name mysql \
-  -p 3306:3306 \
-  -e MYSQL_ROOT_PASSWORD=rootpass \
-  -e MYSQL_DATABASE=testdb \
-  -e MYSQL_USER=testuser \
-  -e MYSQL_PASSWORD=testpass \
-  mysql:latest
-
-# Database available at localhost:3306
 ```
-
-### Database Configuration
-
-The server supports multiple database types with their respective connection libraries:
-
-- **PostgreSQL**: Uses `pg` (node-postgres) for connection pooling and query execution
-- **MySQL**: Uses `mysql2` for connection pooling and prepared statements
-
-## Example Conversation Flow
-
-1. **Connect to a database:**
-   ```
-   User: "Connect to my PostgreSQL database at localhost:5432, database 'myapp', user 'admin', password 'secret'"
-   ```
-
-2. **Explore the schema:**
-   ```
-   User: "Show me all tables in the database"
-   ```
-
-3. **Execute queries:**
-   ```
-   User: "Get the first 10 users from the users table"
-   User: "Count how many orders were created today"
-   ```
-
-4. **Manage connections:**
-   ```
-   User: "List all database connections"
-   User: "Test the myapp connection"
-   User: "Close the myapp connection"
-   ```
-
-5. **Backup and migration:**
-   ```
-   User: "Export all my database configurations for backup"
-   User: "Import connections from my development environment"
-   ```
-
-## Development
+database-mcp-server/
+├── 📁 bin/
+│   └── cli.js                     # Command-line interface entry point
+├── 📁 src/
+│   ├── 📁 database/               # Database layer
+│   │   ├── manager.js             # Connection pool manager
+│   │   └── 📁 drivers/            # Database-specific implementations
+│   │       ├── base.js            # Abstract base driver
+│   │       ├── postgresql.js      # PostgreSQL driver
+│   │       ├── mysql.js           # MySQL driver
+│   │       └── index.js           # Driver factory and registry
+│   ├── 📁 mcp/                    # MCP protocol layer
+│   │   ├── tools.js               # MCP tool definitions
+│   │   └── handlers.js            # Tool implementation handlers
+│   ├── 📁 utils/                  # Shared utilities
+│   │   ├── logger.js              # Structured logging
+│   │   └── config.js              # Configuration management
+│   └── server.js                  # MCP server entry point
+├── 📁 examples/                   # Usage examples
+├── 📁 test/                       # Test suite
+├── package.json                   # Project metadata and dependencies
+├── CLAUDE.md                      # Development documentation
+└── README.md                      # User documentation
+```
 
 ### Architecture Benefits
 
-- **Clean layered architecture**: Infrastructure, business logic, and coordination layers
-- **Strategy pattern**: Database drivers implement common interface with specific implementations
-- **Single responsibility**: Each component has focused, well-defined purpose
-- **Testable design**: Clean abstractions enable comprehensive testing
-- **Scalable**: Easy to extend with new database drivers and operations
-- **Connection pooling**: Reliable connection management with health monitoring
+- **🏗️ Clean Separation**: Infrastructure, business logic, and coordination layers
+- **🔄 Extensible Drivers**: Uses inheritance to support different database types with shared functionality
+- **🔓 Open/Closed Principle**: Open for extension (new drivers) but closed for modification (core unchanged)
+- **🎯 Single Responsibility**: Each component has a focused, well-defined purpose
+- **🧪 Testable Design**: Clean abstractions enable comprehensive testing
+- **📈 Scalable**: Easy to extend with new database drivers and operations
+- **🛡️ Reliable**: Connection pooling and health monitoring for production use
+
+## Development
 
 ### Adding New Database Drivers
 
@@ -719,26 +832,27 @@ The server supports multiple database types with their respective connection lib
 4. **Add database-specific dependencies** to `package.json`
 
 Example:
+
 ```javascript
 // src/database/drivers/mongodb.js
-import { BaseDriver } from './base.js'
+import {BaseDriver} from './base.js'
 
 export class MongoDBDriver extends BaseDriver {
-  async connect() {
-    // MongoDB-specific connection logic
-  }
+	async connect() {
+		// MongoDB-specific connection logic
+	}
 
-  async query(query, params) {
-    // MongoDB query execution
-  }
+	async query(query, params) {
+		// MongoDB query execution
+	}
 
-  async getSchema() {
-    // MongoDB schema introspection
-  }
+	async getSchema() {
+		// MongoDB schema introspection
+	}
 
-  getConnectionString() {
-    // MongoDB connection string format
-  }
+	getConnectionString() {
+		// MongoDB connection string format
+	}
 }
 ```
 
@@ -749,57 +863,102 @@ export class MongoDBDriver extends BaseDriver {
 3. **Add tests** for new functionality
 
 Example:
+
 ```javascript
 // src/mcp/handlers.js
-async handleNewTool(args) {
-  try {
-    const connection = this.dbManager.getConnection(args.connection)
-    const result = await connection.driver.newOperation(args.param)
+async
+handleNewTool(args)
+{
+	try {
+		const connection = this.dbManager.getConnection(args.connection)
+		const result = await connection.driver.newOperation(args.param)
 
-    return {
-      content: [{
-        type: "text",
-        text: JSON.stringify({ success: true, result }, null, 2)
-      }]
-    }
-  } catch (error) {
-    return {
-      content: [{
-        type: "text",
-        text: JSON.stringify({ success: false, error: error.message }, null, 2)
-      }],
-      isError: true
-    }
-  }
+		return {
+			content: [{
+				type: "text",
+				text: JSON.stringify({success: true, result}, null, 2)
+			}]
+		}
+	} catch (error) {
+		return {
+			content: [{
+				type: "text",
+				text: JSON.stringify({success: false, error: error.message}, null, 2)
+			}],
+			isError: true
+		}
+	}
 }
 ```
 
 ### Testing
 
-```bash
-# Run all tests
-npm test
+This project uses **integration-first testing** with real PostgreSQL and MySQL databases via Docker Compose, ensuring
+tests catch real-world database behaviors, connection pooling issues, and database-specific quirks.
 
-# Run tests with coverage
-npm run test:coverage
-
-# Run integration tests (requires database setup)
-npm run test:integration
-```
-
-### Linting
+**🎯 Testing Philosophy**: Test against actual database instances rather than mocks to validate production-ready
+reliability.
 
 ```bash
-npm run lint
+# Complete automated test cycle (recommended)
+npm run test:full
+
+# Manual test environment setup
+npm run test:setup       # Start PostgreSQL + MySQL containers
+npm run test:integration # Run integration tests
+npm run test:teardown    # Stop containers
+
+# Standard testing commands
+npm test                 # Run all tests
+npm run test:coverage    # Run tests with coverage
 ```
+
+**Test Structure**:
+
+- **Integration tests**: DatabaseManager with real databases (PostgreSQL/MySQL specific)
+- **Concrete assertions**: Use exact values (`expect(result.rowCount).toBe(2)`) vs vague checks
+- **Test isolation**: Unique table/connection names per test to prevent interference
 
 ## Security Considerations
 
-- **No credential storage**: Credentials are only held in memory during active connections
-- **Connection isolation**: Each named connection is isolated from others
-- **Parameter binding**: All queries support parameter binding to prevent SQL injection
-- **SSL support**: Both PostgreSQL and MySQL drivers support SSL connections
-- **Resource limits**: Configurable connection pool limits
+### Credential Security
+
+- **Environment Variables vs Configuration Files**:
+    - **🔒 Environment Variables (Recommended)**: More secure since they're isolated to the MCP server process and not
+      accessible via filesystem
+    - **⚠️ Configuration Files**: AI agents can potentially read configuration files through the filesystem, exposing
+      sensitive credentials
+    - **Best Practice**: Use environment variables for production environments and sensitive credentials
+
+- **No persistent credential storage**: Database credentials are only held in memory during active connections and are
+  never persisted to disk
+- **Runtime credential management**: Passwords can be provided dynamically via `connect_database` tool calls without
+  being stored in configuration
+
+### Connection Security
+
+- **Connection isolation**: Each named connection is completely isolated from others, preventing cross-connection data
+  access
+- **SSL/TLS support**: Both PostgreSQL and MySQL drivers support encrypted connections when SSL is enabled
+- **Parameter binding**: All SQL queries use parameterized statements to prevent SQL injection attacks
+- **Resource limits**: Configurable connection pool limits prevent resource exhaustion attacks
+
+### AI Agent Security Considerations
+
+- **File system access**: AI agents using this MCP server may have access to read files in the working directory
+- **Query inspection**: AI agents can see and modify SQL queries before execution
+- **Connection information**: Connection metadata (excluding passwords) is visible to AI agents
+- **Credential isolation**: Use environment variables to keep sensitive credentials outside of AI agent filesystem
+  access
+
+### Production Security Recommendations
+
+1. **Use environment variables** for all sensitive configuration data
+2. **Enable SSL connections** for all database connections in production
+3. **Implement database-level access controls** and use dedicated database users with minimal required privileges
+4. **Monitor query execution** and implement query logging for audit trails
+5. **Use connection pooling limits** to prevent resource exhaustion
+6. **Regularly rotate database credentials** and update environment variables accordingly
 
 ## Troubleshooting
 
@@ -814,6 +973,7 @@ npm run lint
 ### Debug Mode
 
 Enable debug logging for detailed information:
+
 ```bash
 LOG_LEVEL=DEBUG npx @mihailoradovi/database-mcp-server
 ```
@@ -835,13 +995,3 @@ MIT License - see LICENSE file for details.
 - **GitHub Issues**: https://github.com/mihailoradovi/database-mcp-server/issues
 - **Documentation**: See the examples directory for usage examples
 - **MCP Protocol**: https://modelcontextprotocol.io
-
-## Changelog
-
-### v1.0.0
-- Initial release
-- PostgreSQL and MySQL support
-- Connection pooling and management
-- Schema introspection
-- MCP tool integration
-- NPX distribution ready

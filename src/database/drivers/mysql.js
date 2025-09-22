@@ -17,7 +17,10 @@ export class MySQLDriver extends BaseDriver {
       database: this.config.database,
       user: this.config.user,
       password: this.config.password,
-      connectionLimit: this.config.maxConnections || 10,
+      connectionLimit: this.config.maxConnections || 5,
+      acquireTimeout: this.config.acquireTimeout || 5000,
+      timeout: this.config.connectionTimeout || 5000,
+      idleTimeout: this.config.idleTimeout || 60000,
       ssl: this.config.ssl || false,
       charset: 'utf8mb4'
     }
