@@ -1,88 +1,70 @@
 #!/usr/bin/env node
 
-import { startServer } from '../src/server.js'
-import { logger } from '../src/utils/logger.js'
-import { getSupportedTypes } from '../src/database/drivers/index.js'
+import {Command} from 'commander'
+import {startServer} from '../src/server.js'
+import {logger} from '../src/utils/logger.js'
+import {getSupportedTypes} from '../src/database/drivers/index.js'
 
-function showUsage() {
-  console.log(`
-Database MCP Server v1.0.0
+const program = new Command()
 
-A Model Context Protocol server for database connections and queries.
+program
+	.name('mcp-database-server')
+	.description('Database MCP Server for AI integration\n\nA Model Context Protocol server for database connections and queries.\n\nSUPPORTED DATABASES:\n  ' + getSupportedTypes().join(', ') + '\n\nENVIRONMENT VARIABLES:\n  MCP_MODE                 Set to "false" to disable MCP mode\n  LOG_LEVEL               Set logging level (DEBUG, INFO, WARN, ERROR)\n  DATABASE_CONFIG_PATH    Path to database configuration file\n  DB_HOST                 Default database host\n  DB_PORT                 Default database port\n  DB_NAME                 Default database name\n  DB_USER                 Default database user\n  DB_PASSWORD             Default database password\n  DB_TYPE                 Default database type')
+	.version('1.0.0')
+	.option('--log-level <level>', 'Log level (error, warn, info, debug)', 'info')
+	.option('--standalone', 'Run in standalone mode with console logging (default: MCP mode)')
+	.action(async (options) => {
+		try {
+			// Setup logging level
+			const logLevel = options.logLevel || 'info'
+			if (logLevel) {
+				process.env.LOG_LEVEL = logLevel.toLowerCase()
+			}
 
-USAGE:
-  npx mcp-database-server [options]
+			if (options.standalone) {
+				process.env.MCP_MODE = 'false'
+			}
 
-OPTIONS:
-  --help, -h        Show this help message
-  --version, -v     Show version information
-  --log-level       Set log level (DEBUG, INFO, WARN, ERROR)
-  --standalone      Run in standalone mode with console logging (default: MCP mode)
+			logger.info('Database MCP Server starting...', {logLevel, supportedTypes: getSupportedTypes()})
 
-SUPPORTED DATABASES:
-  ${getSupportedTypes().join(', ')}
+			// Create and start MCP server
+			const server = await startServer()
 
-EXAMPLES:
-  # Start the server (MCP mode - silent by default)
-  npx mcp-database-server
+			logger.info('Database MCP Server is ready and listening on stdio')
 
-  # Start in standalone mode with console logging
-  npx mcp-database-server --standalone
+			// Log available tools in debug mode
+			if (logLevel === 'debug') {
+				logger.debug('Server status', {
+					supportedDatabases: getSupportedTypes()
+				})
+			}
 
-  # Start standalone with debug logging
-  npx mcp-database-server --standalone --log-level DEBUG
+		} catch (error) {
+			console.error('Failed to start server:', error.message)
+			process.exit(1)
+		}
+	})
 
-ENVIRONMENT VARIABLES:
-  MCP_MODE                  Set to 'false' to disable MCP mode (default: true)
-  LOG_LEVEL                 Set logging level (DEBUG, INFO, WARN, ERROR)
-  DATABASE_CONFIG_PATH      Path to database configuration file
-  DB_HOST                   Default database host
-  DB_PORT                   Default database port
-  DB_NAME                   Default database name
-  DB_USER                   Default database user
-  DB_PASSWORD               Default database password
-  DB_TYPE                   Default database type
+// Add command to show supported database types
+program
+	.command('types')
+	.description('Show supported database types')
+	.action(async () => {
+		console.log('Supported Database Types:')
+		console.log('========================')
+		getSupportedTypes().forEach(type => {
+			console.log(`- ${type}`)
+		})
+	})
 
-For more information, visit: https://github.com/mradovic95/database-mcp-server
-`)
-}
+// Parse command line arguments
+program.parse()
 
-function showVersion() {
-  console.log('Database MCP Server v1.0.0')
-}
+// If no command was provided and no options were given, show help
+const parsedOptions = program.opts()
+const hasOptions = Object.keys(parsedOptions).length > 0
+const hasCommand = program.args.length > 0
 
-async function main() {
-  const args = process.argv.slice(2)
-  
-  if (args.includes('--help') || args.includes('-h')) {
-    showUsage()
-    return
-  }
-  
-  if (args.includes('--version') || args.includes('-v')) {
-    showVersion()
-    return
-  }
-
-  const logLevelIndex = args.indexOf('--log-level')
-  if (logLevelIndex !== -1 && args[logLevelIndex + 1]) {
-    process.env.LOG_LEVEL = args[logLevelIndex + 1].toLowerCase()
-  }
-
-  try {
-    logger.info('Database MCP Server starting...')
-    await startServer()
-  } catch (error) {
-    logger.error('Failed to start server:', error)
-    console.error('Error: Failed to start Database MCP Server')
-    console.error(error.message)
-    process.exit(1)
-  }
-}
-
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
-    logger.error('Unhandled error in main:', error)
-    process.exit(1)
-  })
+if (!hasOptions && !hasCommand && process.argv.length <= 2) {
+	program.help()
 }

@@ -27,6 +27,7 @@ class DatabaseMCPServer {
     this.toolHandlers = new ToolHandlers()
     this.setupHandlers()
     this.setupErrorHandlers()
+    logger.info('Database MCP Server initialized', { supportedTypes: getSupportedTypes() })
   }
 
   setupHandlers() {
