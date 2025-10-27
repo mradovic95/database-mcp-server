@@ -1,12 +1,15 @@
 import { PostgreSQLDriver } from './postgresql.js'
 import { MySQLDriver } from './mysql.js'
+import { DynamoDBDriver } from './dynamodb.js'
 
 export const SUPPORTED_DRIVERS = {
   postgresql: PostgreSQLDriver,
   postgres: PostgreSQLDriver,
   pg: PostgreSQLDriver,
   mysql: MySQLDriver,
-  mysql2: MySQLDriver
+  mysql2: MySQLDriver,
+  dynamodb: DynamoDBDriver,
+  dynamo: DynamoDBDriver
 }
 
 export function createDriver(type, config) {
@@ -25,4 +28,4 @@ export function getSupportedTypes() {
   return Object.keys(SUPPORTED_DRIVERS)
 }
 
-export { PostgreSQLDriver, MySQLDriver }
+export { PostgreSQLDriver, MySQLDriver, DynamoDBDriver }

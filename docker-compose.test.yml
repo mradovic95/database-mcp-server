@@ -35,3 +35,16 @@ services:
       start_period: 30s
     tmpfs:
       - /var/lib/mysql
+
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    platform: linux/amd64
+    ports:
+      - "8000:8000"
+    command: ["-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s

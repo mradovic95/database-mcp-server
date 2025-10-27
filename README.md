@@ -11,7 +11,7 @@ interact with databases programmatically.
 - **Comprehensive Query Operations**: Execute SQL queries with parameter binding and result formatting
 - **Schema Introspection**: Get table, column, and relationship information from databases
 - **Connection Pooling**: Efficient connection management with configurable pool sizes and connection limits
-- **Multi-database Support**: PostgreSQL, MySQL with extensible driver architecture
+- **Multi-database Support**: PostgreSQL, MySQL, DynamoDB with extensible driver architecture
 - **Health Monitoring**: Automatic connection health checks and database status monitoring
 - **Configuration Management**: Load connections from config files with on-demand connection
 - **Resource Management**: Automatic cleanup and connection lifecycle management
@@ -59,8 +59,12 @@ With this MCP server, you can ask your AI assistant natural language questions a
 
 ### Currently Supported Databases
 
-- **PostgreSQL**
-- **MySQL**
+**SQL Databases:**
+- **PostgreSQL** - Full-featured relational database with connection pooling
+- **MySQL** - Popular relational database with connection pooling
+
+**NoSQL Databases:**
+- **DynamoDB** - AWS managed NoSQL database with PartiQL query support
 
 ## Getting Started
 
@@ -345,6 +349,8 @@ npx mcp-database-server --standalone --log-level DEBUG
 
 For multiple database connections, use the pattern `{CONNECTION_NAME}_DB_{PARAMETER}`:
 
+**SQL Database Parameters:**
+
 | Variable Pattern               | Description                             | Example                           |
 |--------------------------------|-----------------------------------------|-----------------------------------|
 | `{NAME}_DB_TYPE`               | Database type for named connection      | `PROD_DB_TYPE=postgresql`         |
@@ -358,6 +364,16 @@ For multiple database connections, use the pattern `{CONNECTION_NAME}_DB_{PARAME
 | `{NAME}_DB_IDLE_TIMEOUT`       | Idle timeout for named connection       | `PROD_DB_IDLE_TIMEOUT=60000`      |
 | `{NAME}_DB_CONNECTION_TIMEOUT` | Connection timeout for named connection | `PROD_DB_CONNECTION_TIMEOUT=5000` |
 | `{NAME}_DB_ACQUIRE_TIMEOUT`    | Acquire timeout for named connection    | `PROD_DB_ACQUIRE_TIMEOUT=5000`    |
+
+**DynamoDB Parameters:**
+
+| Variable Pattern                | Description                          | Example                                   |
+|---------------------------------|--------------------------------------|-------------------------------------------|
+| `{NAME}_DB_TYPE`                | Database type (must be dynamodb)     | `DYNAMO_DB_TYPE=dynamodb`                 |
+| `{NAME}_DB_REGION`              | AWS region                           | `DYNAMO_DB_REGION=us-east-1`              |
+| `{NAME}_DB_ACCESS_KEY_ID`       | AWS access key ID                    | `DYNAMO_DB_ACCESS_KEY_ID=AKIAXXXXX`       |
+| `{NAME}_DB_SECRET_ACCESS_KEY`   | AWS secret access key                | `DYNAMO_DB_SECRET_ACCESS_KEY=secret`      |
+| `{NAME}_DB_ENDPOINT`            | Custom endpoint (optional)           | `DYNAMO_DB_ENDPOINT=http://localhost:8000`|
 
 **Examples:**
 
@@ -386,6 +402,19 @@ export ANALYTICS_DB_PORT=5432
 export ANALYTICS_DB_NAME=analytics_db
 export ANALYTICS_DB_USER=analytics_user
 export ANALYTICS_DB_PASSWORD=analytics_password
+
+# DynamoDB database
+export DYNAMO_DB_TYPE=dynamodb
+export DYNAMO_DB_REGION=us-east-1
+export DYNAMO_DB_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXX
+export DYNAMO_DB_SECRET_ACCESS_KEY=your-secret-access-key
+
+# DynamoDB Local (for development)
+export DYNAMO_LOCAL_DB_TYPE=dynamodb
+export DYNAMO_LOCAL_DB_REGION=us-east-1
+export DYNAMO_LOCAL_DB_ACCESS_KEY_ID=test
+export DYNAMO_LOCAL_DB_SECRET_ACCESS_KEY=test
+export DYNAMO_LOCAL_DB_ENDPOINT=http://localhost:8000
 ```
 
 **🔒 Security Advantage**: This pattern allows you to configure multiple databases securely using only environment
@@ -394,6 +423,8 @@ variables, avoiding the need for configuration files that AI agents might access
 ### Configuration File Format
 
 The configuration file supports multiple database connections:
+
+#### SQL Databases (PostgreSQL, MySQL)
 
 ```json
 {
@@ -412,6 +443,27 @@ The configuration file supports multiple database connections:
 	}
 }
 ```
+
+#### DynamoDB
+
+```json
+{
+	"dynamodb_connection": {
+		"type": "dynamodb",
+		"region": "us-east-1",
+		"accessKeyId": "AKIAXXXXXXXXXXXXXXXX",
+		"secretAccessKey": "your-secret-access-key",
+		"endpoint": "http://localhost:8000"
+	}
+}
+```
+
+**DynamoDB Configuration Parameters:**
+- `type`: Must be "dynamodb" or "dynamo"
+- `region`: AWS region (required, e.g., "us-east-1", "eu-west-1")
+- `accessKeyId`: AWS access key ID (required)
+- `secretAccessKey`: AWS secret access key (required)
+- `endpoint`: Custom endpoint URL (optional, for local development with DynamoDB Local)
 
 ### Configuration Loading Behavior
 

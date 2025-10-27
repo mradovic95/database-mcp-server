@@ -114,6 +114,19 @@ export class ConfigManager {
           case 'ACQUIRE_TIMEOUT':
             dbConnections[normalizedConnectionName].acquireTimeout = parseInt(value, 10)
             break
+          // DynamoDB-specific parameters
+          case 'REGION':
+            dbConnections[normalizedConnectionName].region = value
+            break
+          case 'ACCESS_KEY_ID':
+            dbConnections[normalizedConnectionName].accessKeyId = value
+            break
+          case 'SECRET_ACCESS_KEY':
+            dbConnections[normalizedConnectionName].secretAccessKey = value
+            break
+          case 'ENDPOINT':
+            dbConnections[normalizedConnectionName].endpoint = value
+            break
           default:
             logger.warn(`Unknown database environment variable parameter: ${parameter} for connection ${connectionName}`)
         }
@@ -153,7 +166,21 @@ export class ConfigManager {
   }
 
   validateConnectionConfig(config) {
-    const required = ['type', 'host', 'database', 'user', 'password']
+    // Check if database type is provided
+    if (!config.type) {
+      throw new Error('Missing required configuration field: type')
+    }
+
+    // Different validation rules for DynamoDB vs SQL databases
+    const isDynamoDB = ['dynamodb', 'dynamo'].includes(config.type.toLowerCase())
+
+    let required
+    if (isDynamoDB) {
+      required = ['type', 'region', 'accessKeyId', 'secretAccessKey']
+    } else {
+      required = ['type', 'host', 'database', 'user', 'password']
+    }
+
     const missing = required.filter(field => !config[field])
 
     if (missing.length > 0) {

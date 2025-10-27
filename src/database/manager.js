@@ -145,14 +145,31 @@ export class DatabaseManager {
 
   getConnectionInfo(connectionName) {
     const connection = this.getConnection(connectionName)
-    return {
+    const isDynamoDB = ['dynamodb', 'dynamo'].includes(connection.config.type?.toLowerCase())
+
+    const baseInfo = {
       name: connectionName,
       type: connection.config.type,
-      host: connection.config.host,
-      database: connection.config.database,
-      user: connection.config.user,
       createdAt: connection.createdAt,
-      lastUsed: connection.lastUsed
+      lastUsed: connection.lastUsed,
+      connectionString: connection.driver.getConnectionString()
+    }
+
+    if (isDynamoDB) {
+      // DynamoDB-specific info
+      return {
+        ...baseInfo,
+        region: connection.config.region,
+        endpoint: connection.config.endpoint
+      }
+    } else {
+      // SQL database info
+      return {
+        ...baseInfo,
+        host: connection.config.host,
+        database: connection.config.database,
+        user: connection.config.user
+      }
     }
   }
 

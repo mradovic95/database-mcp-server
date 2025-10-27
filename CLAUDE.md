@@ -24,18 +24,18 @@ extensible driver patterns, providing reliable database operations through conne
                                               │ Manager         │
                                               └────────┬────────┘
                                                        │
-                                    ┌─────────────────┼─────────────────┐
-                                    │                 │                 │
-                              ┌─────┴─────┐  ┌────────┴────────┐ ┌─────┴─────┐
-                              │PostgreSQL │  │     MySQL       │ │  Future   │
-                              │  Driver   │  │    Driver       │ │  Drivers  │
-                              └─────┬─────┘  └────────┬────────┘ └─────┬─────┘
-                                    │                 │                 │
-                              ┌─────┴─────┐  ┌────────┴────────┐ ┌─────┴─────┐
-                              │PostgreSQL │  │     MySQL       │ │   Other   │
-                              │Connection │  │   Connection    │ │ Databases │
-                              │   Pool    │  │     Pool        │ │           │
-                              └───────────┘  └─────────────────┘ └───────────┘
+                                    ┌─────────────────┼──────────────────┼─────────────────┐
+                                    │                 │                  │                 │
+                              ┌─────┴─────┐  ┌────────┴────────┐ ┌──────┴──────┐  ┌─────┴─────┐
+                              │PostgreSQL │  │     MySQL       │ │  DynamoDB   │  │  Future   │
+                              │  Driver   │  │    Driver       │ │   Driver    │  │  Drivers  │
+                              └─────┬─────┘  └────────┬────────┘ └──────┬──────┘  └─────┬─────┘
+                                    │                 │                  │                 │
+                              ┌─────┴─────┐  ┌────────┴────────┐ ┌──────┴──────┐  ┌─────┴─────┐
+                              │PostgreSQL │  │     MySQL       │ │  AWS SDK    │  │   Other   │
+                              │Connection │  │   Connection    │ │   Client    │  │ Databases │
+                              │   Pool    │  │     Pool        │ │             │  │           │
+                              └───────────┘  └─────────────────┘ └─────────────┘  └───────────┘
 ```
 
 ## Clean Layered Architecture Components
@@ -67,11 +67,21 @@ extensible driver patterns, providing reliable database operations through conne
 - **Purpose**: Infrastructure layer - database-specific client implementations
 - **Pattern**: Strategy pattern with factory
 - **Responsibilities**:
-    - Database connection management (PostgreSQL, MySQL)
-    - Connection pooling configuration and lifecycle
-    - Query execution with parameter binding
+    - Database connection management (PostgreSQL, MySQL, DynamoDB)
+    - Connection pooling configuration and lifecycle (SQL databases)
+    - AWS SDK client management (DynamoDB)
+    - Query execution with parameter binding (SQL) and PartiQL (DynamoDB)
     - Schema introspection and metadata retrieval
     - No business logic - pure infrastructure
+
+##### Supported Drivers
+
+**SQL Databases:**
+- **PostgreSQL** (`src/database/drivers/postgresql.js`): Full-featured PostgreSQL driver with connection pooling
+- **MySQL** (`src/database/drivers/mysql.js`): MySQL driver with connection pooling
+
+**NoSQL Databases:**
+- **DynamoDB** (`src/database/drivers/dynamodb.js`): AWS DynamoDB driver with PartiQL query support
 
 ### Business Logic Layer
 
@@ -399,14 +409,42 @@ export ANALYTICS_DB_ACQUIRE_TIMEOUT=20000
 **Environment Variable Pattern Rules:**
 - `{CONNECTION_NAME}` must be uppercase letters, numbers, and underscores
 - `{CONNECTION_NAME}` becomes the connection name (converted to lowercase)
-- Supported parameters: TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, MAX_CONNECTIONS, IDLE_TIMEOUT, CONNECTION_TIMEOUT, ACQUIRE_TIMEOUT
+- **SQL Database Parameters**: TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, MAX_CONNECTIONS, IDLE_TIMEOUT, CONNECTION_TIMEOUT, ACQUIRE_TIMEOUT
+- **DynamoDB Parameters**: TYPE, REGION, ACCESS_KEY_ID, SECRET_ACCESS_KEY, ENDPOINT (optional)
 - Invalid patterns are ignored (e.g., `prod_DB_TYPE`, `DB_PROD_TYPE`, `INVALID_PROD_TYPE`)
+
+#### DynamoDB Configuration
+
+DynamoDB uses AWS credentials instead of traditional database connection parameters:
+
+```bash
+# DynamoDB Configuration
+export DYNAMO_DB_TYPE=dynamodb
+export DYNAMO_DB_REGION=us-east-1
+export DYNAMO_DB_ACCESS_KEY_ID=AKIAXXXXXXXXXXXXXXXX
+export DYNAMO_DB_SECRET_ACCESS_KEY=your-secret-access-key
+
+# Optional: For local development with DynamoDB Local
+export DYNAMO_LOCAL_DB_TYPE=dynamodb
+export DYNAMO_LOCAL_DB_REGION=us-east-1
+export DYNAMO_LOCAL_DB_ACCESS_KEY_ID=test
+export DYNAMO_LOCAL_DB_SECRET_ACCESS_KEY=test
+export DYNAMO_LOCAL_DB_ENDPOINT=http://localhost:8000
+```
+
+**DynamoDB Configuration Differences:**
+- **Authentication**: Uses AWS credentials (accessKeyId, secretAccessKey) instead of user/password
+- **Region**: AWS region is required (e.g., us-east-1, eu-west-1)
+- **Endpoint**: Optional custom endpoint for local development (DynamoDB Local/LocalStack)
+- **Query Language**: Supports PartiQL (SQL-compatible query language for DynamoDB)
+- **Schema**: Tables with partition keys, sort keys, and secondary indexes
 
 **Security Benefits:**
 - Keep sensitive credentials in environment variables
 - Support multiple databases without configuration files
 - Environment-based configuration management
 - No credentials stored in version control
+- AWS IAM integration for DynamoDB
 
 ### Configuration Benefits
 
@@ -451,6 +489,8 @@ This approach provides several benefits:
 
 ### Adding New Database Types
 
+The server now supports PostgreSQL, MySQL, and DynamoDB. To add additional database types (e.g., MongoDB, Redis), follow these steps:
+
 1. **Create Driver Class**:
 
 ```javascript
@@ -460,14 +500,32 @@ import {BaseDriver} from './base.js'
 export class MongoDBDriver extends BaseDriver {
 	async connect() {
 		// MongoDB-specific connection logic
+		// Example: Initialize MongoDB client, test connection
 	}
 
 	async query(query, params) {
 		// MongoDB query execution
+		// Example: Execute query using MongoDB driver
 	}
 
 	async getSchema() {
 		// MongoDB schema introspection
+		// Example: List collections and their schemas
+	}
+
+	validateConfig() {
+		// Custom validation for MongoDB (host, port, database)
+		const required = ['host', 'database']
+		const missing = required.filter(field => !this.config[field])
+		if (missing.length > 0) {
+			throw new Error(`Missing required MongoDB configuration fields: ${missing.join(', ')}`)
+		}
+	}
+
+	getConnectionString() {
+		// Return connection string for display
+		const { host, port = 27017, database } = this.config
+		return `mongodb://${host}:${port}/${database}`
 	}
 }
 ```
@@ -495,6 +553,12 @@ export const SUPPORTED_DRIVERS = {
 	}
 }
 ```
+
+4. **Update Configuration Manager** (if needed):
+
+For databases with unique configuration parameters (like DynamoDB's AWS credentials), update `src/utils/config.js` to handle new environment variable patterns.
+
+**Reference Implementation**: See `src/database/drivers/dynamodb.js` for a complete example of a NoSQL driver with AWS SDK integration.
 
 ### Adding New MCP Tools
 
