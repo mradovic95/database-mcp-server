@@ -145,7 +145,9 @@ export class DatabaseManager {
 
   getConnectionInfo(connectionName) {
     const connection = this.getConnection(connectionName)
-    const isDynamoDB = ['dynamodb', 'dynamo'].includes(connection.config.type?.toLowerCase())
+    const dbType = connection.config.type?.toLowerCase()
+    const isDynamoDB = ['dynamodb', 'dynamo'].includes(dbType)
+    const isRedis = dbType === 'redis'
 
     const baseInfo = {
       name: connectionName,
@@ -161,6 +163,15 @@ export class DatabaseManager {
         ...baseInfo,
         region: connection.config.region,
         endpoint: connection.config.endpoint
+      }
+    } else if (isRedis) {
+      // Redis-specific info
+      return {
+        ...baseInfo,
+        host: connection.config.host,
+        port: connection.config.port || 6379,
+        database: connection.config.database || 0,
+        tls: connection.config.tls || false
       }
     } else {
       // SQL database info

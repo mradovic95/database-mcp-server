@@ -1,6 +1,7 @@
 import { PostgreSQLDriver } from './postgresql.js'
 import { MySQLDriver } from './mysql.js'
 import { DynamoDBDriver } from './dynamodb.js'
+import { RedisDriver } from './redis.js'
 
 export const SUPPORTED_DRIVERS = {
   postgresql: PostgreSQLDriver,
@@ -9,7 +10,8 @@ export const SUPPORTED_DRIVERS = {
   mysql: MySQLDriver,
   mysql2: MySQLDriver,
   dynamodb: DynamoDBDriver,
-  dynamo: DynamoDBDriver
+  dynamo: DynamoDBDriver,
+  redis: RedisDriver
 }
 
 export function createDriver(type, config) {
@@ -28,4 +30,4 @@ export function getSupportedTypes() {
   return Object.keys(SUPPORTED_DRIVERS)
 }
 
-export { PostgreSQLDriver, MySQLDriver, DynamoDBDriver }
+export { PostgreSQLDriver, MySQLDriver, DynamoDBDriver, RedisDriver }

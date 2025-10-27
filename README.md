@@ -11,7 +11,7 @@ interact with databases programmatically.
 - **Comprehensive Query Operations**: Execute SQL queries with parameter binding and result formatting
 - **Schema Introspection**: Get table, column, and relationship information from databases
 - **Connection Pooling**: Efficient connection management with configurable pool sizes and connection limits
-- **Multi-database Support**: PostgreSQL, MySQL, DynamoDB with extensible driver architecture
+- **Multi-database Support**: PostgreSQL, MySQL, DynamoDB, Redis with extensible driver architecture
 - **Health Monitoring**: Automatic connection health checks and database status monitoring
 - **Configuration Management**: Load connections from config files with on-demand connection
 - **Resource Management**: Automatic cleanup and connection lifecycle management
@@ -65,6 +65,7 @@ With this MCP server, you can ask your AI assistant natural language questions a
 
 **NoSQL Databases:**
 - **DynamoDB** - AWS managed NoSQL database with PartiQL query support
+- **Redis** - In-memory data store with support for strings, hashes, lists, sets, and sorted sets
 
 ## Getting Started
 
@@ -375,6 +376,17 @@ For multiple database connections, use the pattern `{CONNECTION_NAME}_DB_{PARAME
 | `{NAME}_DB_SECRET_ACCESS_KEY`   | AWS secret access key                | `DYNAMO_DB_SECRET_ACCESS_KEY=secret`      |
 | `{NAME}_DB_ENDPOINT`            | Custom endpoint (optional)           | `DYNAMO_DB_ENDPOINT=http://localhost:8000`|
 
+**Redis Parameters:**
+
+| Variable Pattern                | Description                          | Example                                   |
+|---------------------------------|--------------------------------------|-------------------------------------------|
+| `{NAME}_DB_TYPE`                | Database type (must be redis)        | `CACHE_DB_TYPE=redis`                     |
+| `{NAME}_DB_HOST`                | Redis hostname                       | `CACHE_DB_HOST=localhost`                 |
+| `{NAME}_DB_PORT`                | Redis port                           | `CACHE_DB_PORT=6379`                      |
+| `{NAME}_DB_PASSWORD`            | Redis password (optional)            | `CACHE_DB_PASSWORD=secret`                |
+| `{NAME}_DB_DATABASE`            | Redis database number (0-15)         | `CACHE_DB_DATABASE=0`                     |
+| `{NAME}_DB_TLS`                 | Enable TLS connection (optional)     | `CACHE_DB_TLS=true`                       |
+
 **Examples:**
 
 ```bash
@@ -415,6 +427,13 @@ export DYNAMO_LOCAL_DB_REGION=us-east-1
 export DYNAMO_LOCAL_DB_ACCESS_KEY_ID=test
 export DYNAMO_LOCAL_DB_SECRET_ACCESS_KEY=test
 export DYNAMO_LOCAL_DB_ENDPOINT=http://localhost:8000
+
+# Redis cache
+export CACHE_DB_TYPE=redis
+export CACHE_DB_HOST=localhost
+export CACHE_DB_PORT=6379
+export CACHE_DB_PASSWORD=secret
+export CACHE_DB_DATABASE=0
 ```
 
 **🔒 Security Advantage**: This pattern allows you to configure multiple databases securely using only environment
@@ -464,6 +483,29 @@ The configuration file supports multiple database connections:
 - `accessKeyId`: AWS access key ID (required)
 - `secretAccessKey`: AWS secret access key (required)
 - `endpoint`: Custom endpoint URL (optional, for local development with DynamoDB Local)
+
+#### Redis
+
+```json
+{
+	"redis_connection": {
+		"type": "redis",
+		"host": "localhost",
+		"port": 6379,
+		"password": "secret",
+		"database": 0,
+		"tls": false
+	}
+}
+```
+
+**Redis Configuration Parameters:**
+- `type`: Must be "redis"
+- `host`: Redis hostname (required)
+- `port`: Redis port (optional, default: 6379)
+- `password`: Redis password (optional)
+- `database`: Redis database number 0-15 (optional, default: 0)
+- `tls`: Enable TLS/SSL connection (optional, default: false)
 
 ### Configuration Loading Behavior
 

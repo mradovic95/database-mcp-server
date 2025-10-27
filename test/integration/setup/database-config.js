@@ -29,9 +29,18 @@ export const dynamodbConfig = {
   endpoint: 'http://localhost:8000'
 }
 
+export const redisConfig = {
+  type: 'redis',
+  host: 'localhost',
+  port: 6379,
+  password: 'testpass',
+  database: 0
+}
+
 // Multi-database test configurations
 export const testConfigurations = {
   postgres: postgresConfig,
   mysql: mysqlConfig,
-  dynamodb: dynamodbConfig
+  dynamodb: dynamodbConfig,
+  redis: redisConfig
 }

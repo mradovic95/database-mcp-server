@@ -48,3 +48,16 @@ services:
       timeout: 3s
       retries: 12
       start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    platform: linux/amd64
+    ports:
+      - "6379:6379"
+    command: redis-server --requirepass testpass
+    healthcheck:
+      test: ["CMD", "redis-cli", "--auth", "testpass", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s

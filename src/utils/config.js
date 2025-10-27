@@ -127,6 +127,17 @@ export class ConfigManager {
           case 'ENDPOINT':
             dbConnections[normalizedConnectionName].endpoint = value
             break
+          // Redis-specific parameters
+          case 'TLS':
+            dbConnections[normalizedConnectionName].tls = value.toLowerCase() === 'true'
+            break
+          case 'DATABASE':
+            // For Redis, DATABASE is a number (0-15), not a name
+            const dbNum = parseInt(value, 10)
+            if (!isNaN(dbNum)) {
+              dbConnections[normalizedConnectionName].database = dbNum
+            }
+            break
           default:
             logger.warn(`Unknown database environment variable parameter: ${parameter} for connection ${connectionName}`)
         }
@@ -171,13 +182,18 @@ export class ConfigManager {
       throw new Error('Missing required configuration field: type')
     }
 
-    // Different validation rules for DynamoDB vs SQL databases
-    const isDynamoDB = ['dynamodb', 'dynamo'].includes(config.type.toLowerCase())
+    // Different validation rules for different database types
+    const dbType = config.type.toLowerCase()
+    const isDynamoDB = ['dynamodb', 'dynamo'].includes(dbType)
+    const isRedis = dbType === 'redis'
 
     let required
     if (isDynamoDB) {
       required = ['type', 'region', 'accessKeyId', 'secretAccessKey']
+    } else if (isRedis) {
+      required = ['type', 'host']
     } else {
+      // SQL databases (PostgreSQL, MySQL, etc.)
       required = ['type', 'host', 'database', 'user', 'password']
     }
 

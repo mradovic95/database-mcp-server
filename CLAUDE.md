@@ -24,18 +24,18 @@ extensible driver patterns, providing reliable database operations through conne
                                               │ Manager         │
                                               └────────┬────────┘
                                                        │
-                                    ┌─────────────────┼──────────────────┼─────────────────┐
-                                    │                 │                  │                 │
-                              ┌─────┴─────┐  ┌────────┴────────┐ ┌──────┴──────┐  ┌─────┴─────┐
-                              │PostgreSQL │  │     MySQL       │ │  DynamoDB   │  │  Future   │
-                              │  Driver   │  │    Driver       │ │   Driver    │  │  Drivers  │
-                              └─────┬─────┘  └────────┬────────┘ └──────┬──────┘  └─────┬─────┘
-                                    │                 │                  │                 │
-                              ┌─────┴─────┐  ┌────────┴────────┐ ┌──────┴──────┐  ┌─────┴─────┐
-                              │PostgreSQL │  │     MySQL       │ │  AWS SDK    │  │   Other   │
-                              │Connection │  │   Connection    │ │   Client    │  │ Databases │
-                              │   Pool    │  │     Pool        │ │             │  │           │
-                              └───────────┘  └─────────────────┘ └─────────────┘  └───────────┘
+                                    ┌────────────┼──────────────┼──────────────┼─────────────┐
+                                    │            │              │              │             │
+                              ┌─────┴─────┐ ┌──┴────┐  ┌───────┴───────┐ ┌──┴────┐  ┌─────┴─────┐
+                              │PostgreSQL │ │ MySQL │  │   DynamoDB    │ │ Redis │  │  Future   │
+                              │  Driver   │ │Driver │  │    Driver     │ │Driver │  │  Drivers  │
+                              └─────┬─────┘ └──┬────┘  └───────┬───────┘ └──┬────┘  └─────┬─────┘
+                                    │            │              │              │             │
+                              ┌─────┴─────┐ ┌──┴────┐  ┌───────┴───────┐ ┌──┴────┐  ┌─────┴─────┐
+                              │PostgreSQL │ │ MySQL │  │    AWS SDK    │ │ioredis│  │   Other   │
+                              │Connection │ │Connect│  │    Client     │ │Client │  │ Databases │
+                              │   Pool    │ │ Pool  │  │               │ │       │  │           │
+                              └───────────┘ └───────┘  └───────────────┘ └───────┘  └───────────┘
 ```
 
 ## Clean Layered Architecture Components
@@ -82,6 +82,7 @@ extensible driver patterns, providing reliable database operations through conne
 
 **NoSQL Databases:**
 - **DynamoDB** (`src/database/drivers/dynamodb.js`): AWS DynamoDB driver with PartiQL query support
+- **Redis** (`src/database/drivers/redis.js`): In-memory data store with Redis command support
 
 ### Business Logic Layer
 
@@ -411,6 +412,7 @@ export ANALYTICS_DB_ACQUIRE_TIMEOUT=20000
 - `{CONNECTION_NAME}` becomes the connection name (converted to lowercase)
 - **SQL Database Parameters**: TYPE, HOST, PORT, NAME, USER, PASSWORD, SSL, MAX_CONNECTIONS, IDLE_TIMEOUT, CONNECTION_TIMEOUT, ACQUIRE_TIMEOUT
 - **DynamoDB Parameters**: TYPE, REGION, ACCESS_KEY_ID, SECRET_ACCESS_KEY, ENDPOINT (optional)
+- **Redis Parameters**: TYPE, HOST, PORT, PASSWORD (optional), DATABASE (0-15), TLS (optional)
 - Invalid patterns are ignored (e.g., `prod_DB_TYPE`, `DB_PROD_TYPE`, `INVALID_PROD_TYPE`)
 
 #### DynamoDB Configuration
@@ -438,6 +440,34 @@ export DYNAMO_LOCAL_DB_ENDPOINT=http://localhost:8000
 - **Endpoint**: Optional custom endpoint for local development (DynamoDB Local/LocalStack)
 - **Query Language**: Supports PartiQL (SQL-compatible query language for DynamoDB)
 - **Schema**: Tables with partition keys, sort keys, and secondary indexes
+
+#### Redis Configuration
+
+Redis uses a simpler configuration model:
+
+```bash
+# Redis Configuration
+export CACHE_DB_TYPE=redis
+export CACHE_DB_HOST=localhost
+export CACHE_DB_PORT=6379
+export CACHE_DB_PASSWORD=secret
+export CACHE_DB_DATABASE=0
+
+# Redis with TLS
+export SECURE_CACHE_DB_TYPE=redis
+export SECURE_CACHE_DB_HOST=redis.example.com
+export SECURE_CACHE_DB_PORT=6380
+export SECURE_CACHE_DB_PASSWORD=secret
+export SECURE_CACHE_DB_DATABASE=0
+export SECURE_CACHE_DB_TLS=true
+```
+
+**Redis Configuration Differences:**
+- **Authentication**: Optional password-based authentication (no username)
+- **Database Selection**: Redis supports 16 databases (0-15) per instance
+- **Commands**: Uses native Redis commands (GET, SET, HGET, LPUSH, etc.) instead of SQL
+- **Schema**: No predefined schema - key-value store with data structures
+- **Connection**: Single connection or connection pooling via ioredis
 
 **Security Benefits:**
 - Keep sensitive credentials in environment variables
